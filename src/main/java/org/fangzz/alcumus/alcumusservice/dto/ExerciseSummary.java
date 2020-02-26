@@ -1,27 +1,17 @@
-package org.fangzz.alcumus.alcumusservice.model;
+package org.fangzz.alcumus.alcumusservice.dto;
 
-import javax.persistence.*;
-import java.util.HashSet;
-import java.util.Set;
+import com.google.common.base.Strings;
+import org.fangzz.alcumus.alcumusservice.model.Exercise;
 
-@Entity
-@Table(name = "t_exercises")
-public class Exercise extends DeletedAbleEntity {
-    @ManyToOne
-    private ExerciseCategory category;
+public class ExerciseSummary extends BaseDto {
     private String name;
-
-    @Column(name = "exercise_desc")
     private String desc;
-
     private float difficulty = 0; //0到1之间
-
     private String answer; //答案
-
     private String answerDesc; //答案解析
-
-    @Column(name = "exercise_from")
     private String from; //练习题摘录自哪里
+    private String[] tags;
+    private boolean online = false;
 
     public boolean isOnline() {
         return online;
@@ -31,15 +21,20 @@ public class Exercise extends DeletedAbleEntity {
         this.online = online;
     }
 
-    @Column(name = "exercise_online")
-    private boolean online = false;
+    public static ExerciseSummary from(Exercise model) {
+        if (null == model) {
+            return null;
+        }
 
-    public ExerciseCategory getCategory() {
-        return category;
-    }
+        ExerciseSummary dto = new ExerciseSummary();
+        BaseDto.convert(model, dto);
+        if (!Strings.isNullOrEmpty(model.getTagNames())) {
+            dto.setTags(model.getTagNames().split(","));
+        } else {
+            dto.setTags(new String[]{});
+        }
 
-    public void setCategory(ExerciseCategory category) {
-        this.category = category;
+        return dto;
     }
 
     public String getName() {
@@ -90,23 +85,11 @@ public class Exercise extends DeletedAbleEntity {
         this.from = from;
     }
 
-    public Set<ExerciseTag> getTags() {
+    public String[] getTags() {
         return tags;
     }
 
-    public void setTags(Set<ExerciseTag> tags) {
+    public void setTags(String[] tags) {
         this.tags = tags;
-    }
-
-    @ManyToMany(fetch = FetchType.LAZY)
-    private Set<ExerciseTag> tags = new HashSet<ExerciseTag>();
-    private String tagNames;
-
-    public String getTagNames() {
-        return tagNames;
-    }
-
-    public void setTagNames(String tagNames) {
-        this.tagNames = tagNames;
     }
 }

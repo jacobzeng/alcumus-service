@@ -1,13 +1,15 @@
 package org.fangzz.alcumus.alcumusservice.web.mgr;
 
 import org.fangzz.alcumus.alcumusservice.dto.ExerciseCategorySummary;
-import org.fangzz.alcumus.alcumusservice.dto.param.ExerciseCategoryCreateParameter;
-import org.fangzz.alcumus.alcumusservice.dto.param.ExerciseCategoryQueryParameter;
-import org.fangzz.alcumus.alcumusservice.dto.param.ExerciseCategoryUpdateParameter;
+import org.fangzz.alcumus.alcumusservice.dto.ExerciseSummary;
+import org.fangzz.alcumus.alcumusservice.dto.param.*;
+import org.fangzz.alcumus.alcumusservice.model.Exercise;
 import org.fangzz.alcumus.alcumusservice.model.ExerciseCategory;
 import org.fangzz.alcumus.alcumusservice.service.ExerciseService;
 import org.fangzz.alcumus.alcumusservice.web.UserAwareController;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
@@ -46,5 +48,30 @@ public class ExerciseMgrRestController extends UserAwareController {
     @DeleteMapping("/mgr/exercise-categories/{id}")
     public void deleteExerciseCategory(@PathVariable Integer id) {
         exerciseService.deleteExerciseCategory(id, requireUser());
+    }
+
+    @PostMapping("/mgr/exercises")
+    public ExerciseSummary createExercise(@RequestBody ExerciseCreateParameter parameter) {
+        return ExerciseSummary.from(exerciseService.createExercise(parameter, requireUser()));
+    }
+
+    @PostMapping("/mgr/exercises/{id}")
+    public ExerciseSummary updateExercise(@PathVariable Integer id, @RequestBody ExerciseCreateParameter parameter) {
+        return ExerciseSummary.from(exerciseService.updateExercise(id, parameter, requireUser()));
+    }
+
+    @DeleteMapping("/mgr/exercises/{id}")
+    public void deleteExercise(@PathVariable Integer id) {
+        exerciseService.deleteExercise(id, requireUser());
+    }
+
+    @GetMapping("/mgr/exercises")
+    @Transactional(readOnly = true)
+    public Page<ExerciseSummary> queryExercises(ExerciseQueryParameter parameter) {
+        Page<Exercise> queryResult = exerciseService.queryExercises(parameter, requireUser());
+        return new PageImpl<>(queryResult.stream().map(ExerciseSummary::from).collect(Collectors.toList()),
+                queryResult.getPageable(),
+                queryResult.getTotalElements()
+        );
     }
 }

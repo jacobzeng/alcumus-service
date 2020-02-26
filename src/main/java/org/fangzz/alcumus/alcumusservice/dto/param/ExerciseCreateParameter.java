@@ -1,27 +1,22 @@
-package org.fangzz.alcumus.alcumusservice.model;
+package org.fangzz.alcumus.alcumusservice.dto.param;
 
-import javax.persistence.*;
-import java.util.HashSet;
-import java.util.Set;
+import javax.validation.constraints.Max;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.NotEmpty;
 
-@Entity
-@Table(name = "t_exercises")
-public class Exercise extends DeletedAbleEntity {
-    @ManyToOne
-    private ExerciseCategory category;
+public class ExerciseCreateParameter {
+    private Integer categoryId;
+    @NotEmpty(message = "习题名称不能为空")
     private String name;
-
-    @Column(name = "exercise_desc")
     private String desc;
-
+    @Min(value = 0, message = "难度系数值为0到1之间")
+    @Max(value = 1, message = "难度系数值为0到1之间")
     private float difficulty = 0; //0到1之间
-
     private String answer; //答案
-
     private String answerDesc; //答案解析
-
-    @Column(name = "exercise_from")
     private String from; //练习题摘录自哪里
+    private String[] tags;
+    private boolean online = false;
 
     public boolean isOnline() {
         return online;
@@ -31,15 +26,12 @@ public class Exercise extends DeletedAbleEntity {
         this.online = online;
     }
 
-    @Column(name = "exercise_online")
-    private boolean online = false;
-
-    public ExerciseCategory getCategory() {
-        return category;
+    public Integer getCategoryId() {
+        return categoryId;
     }
 
-    public void setCategory(ExerciseCategory category) {
-        this.category = category;
+    public void setCategoryId(Integer categoryId) {
+        this.categoryId = categoryId;
     }
 
     public String getName() {
@@ -90,23 +82,11 @@ public class Exercise extends DeletedAbleEntity {
         this.from = from;
     }
 
-    public Set<ExerciseTag> getTags() {
+    public String[] getTags() {
         return tags;
     }
 
-    public void setTags(Set<ExerciseTag> tags) {
+    public void setTags(String[] tags) {
         this.tags = tags;
-    }
-
-    @ManyToMany(fetch = FetchType.LAZY)
-    private Set<ExerciseTag> tags = new HashSet<ExerciseTag>();
-    private String tagNames;
-
-    public String getTagNames() {
-        return tagNames;
-    }
-
-    public void setTagNames(String tagNames) {
-        this.tagNames = tagNames;
     }
 }
