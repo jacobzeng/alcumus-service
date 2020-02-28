@@ -2,7 +2,9 @@ package org.fangzz.alcumus.alcumusservice.service.impl;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.fangzz.alcumus.alcumusservice.dto.param.StudentRegisterParameter;
 import org.fangzz.alcumus.alcumusservice.dto.param.UserCreateParameter;
+import org.fangzz.alcumus.alcumusservice.exception.BizException;
 import org.fangzz.alcumus.alcumusservice.model.User;
 import org.fangzz.alcumus.alcumusservice.model.UserRole;
 import org.fangzz.alcumus.alcumusservice.repository.UserRepository;
@@ -45,5 +47,18 @@ public class UserServiceImpl implements UserService {
             user.setRoles(Arrays.asList(parameter.getRoles()));
         }
         return userRepository.save(user);
+    }
+
+    @Override
+    public User createStudentAccount(@NotNull @Valid StudentRegisterParameter parameter) {
+        if (!parameter.getPassword().equals(parameter.getPasswordAgain())) {
+            throw new BizException("两次输入的密码不一致");
+        }
+        UserCreateParameter userCreateParameter = new UserCreateParameter();
+        userCreateParameter.setNickname(parameter.getNickname());
+        userCreateParameter.setUsername(parameter.getUsername());
+        userCreateParameter.setPassword(parameter.getPassword());
+        userCreateParameter.setRoles(new UserRole[]{UserRole.ROLE_USER, UserRole.ROLE_STUDENT});
+        return createUser(userCreateParameter);
     }
 }

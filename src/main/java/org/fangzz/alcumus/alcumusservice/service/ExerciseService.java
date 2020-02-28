@@ -1,9 +1,11 @@
 package org.fangzz.alcumus.alcumusservice.service;
 
+import org.fangzz.alcumus.alcumusservice.dto.ExerciseAnswerResponse;
 import org.fangzz.alcumus.alcumusservice.dto.param.*;
 import org.fangzz.alcumus.alcumusservice.model.Exercise;
 import org.fangzz.alcumus.alcumusservice.model.ExerciseCategory;
 import org.fangzz.alcumus.alcumusservice.model.User;
+import org.fangzz.alcumus.alcumusservice.model.UserCategory;
 import org.springframework.data.domain.Page;
 
 import javax.validation.Valid;
@@ -33,4 +35,16 @@ public interface ExerciseService {
     void deleteExercise(@NotNull Integer id, @NotNull User requireUser);
 
     Page<Exercise> queryExercises(@NotNull ExerciseQueryParameter parameter, @NotNull User requireUser);
+
+    ExerciseCategory getStudentCurrentCategory(@NotNull User student);
+
+    List<ExerciseCategory> listExerciseCategories(@NotNull ExerciseCategoryQueryParameter parameter);
+
+    UserCategory setStudentCurrentCategory(@NotNull @Valid StudentSetCurrentCategoryParameter parameter,
+                                           @NotNull User currentUser);
+
+    Exercise nextStudentExercise(@NotNull User currentUser);
+
+    ExerciseAnswerResponse submitStudentAnswer(@NotNull User student,
+                                               @NotNull @Valid ExerciseAnswerParameter parameter);
 }

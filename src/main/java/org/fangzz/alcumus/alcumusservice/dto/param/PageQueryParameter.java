@@ -25,7 +25,7 @@ public class PageQueryParameter {
             }
         }
         if (orderList.size() == 0) {
-            return null;
+            return Sort.by(Sort.Direction.DESC, "createdAt");
         } else {
             return Sort.by(orderList);
         }

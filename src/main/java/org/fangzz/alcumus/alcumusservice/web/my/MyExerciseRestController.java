@@ -1,0 +1,49 @@
+package org.fangzz.alcumus.alcumusservice.web.my;
+
+import org.fangzz.alcumus.alcumusservice.dto.BaseDto;
+import org.fangzz.alcumus.alcumusservice.dto.ExerciseAnswerResponse;
+import org.fangzz.alcumus.alcumusservice.dto.ExerciseCategorySummary;
+import org.fangzz.alcumus.alcumusservice.dto.ExerciseSummaryWithoutAnswer;
+import org.fangzz.alcumus.alcumusservice.dto.param.ExerciseAnswerParameter;
+import org.fangzz.alcumus.alcumusservice.dto.param.StudentSetCurrentCategoryParameter;
+import org.fangzz.alcumus.alcumusservice.model.UserCategory;
+import org.fangzz.alcumus.alcumusservice.service.ExerciseService;
+import org.fangzz.alcumus.alcumusservice.web.UserAwareController;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@Transactional
+@RequestMapping("/api")
+public class MyExerciseRestController extends UserAwareController {
+
+    @Autowired
+    private ExerciseService exerciseService;
+
+    @GetMapping("/my/exercise-categories/focus")
+    @Transactional(readOnly = true)
+    public ExerciseCategorySummary currentFocus() {
+        return ExerciseCategorySummary.from(exerciseService.getStudentCurrentCategory(currentUser()));
+    }
+
+    @PostMapping("/my/exercise-categories/focus")
+    public BaseDto setCurrentFocus(@RequestBody StudentSetCurrentCategoryParameter parameter) {
+        UserCategory model = exerciseService.setStudentCurrentCategory(parameter, currentUser());
+        BaseDto result = new BaseDto();
+        BaseDto.convert(model, result);
+        return result;
+    }
+
+    @GetMapping("/my/exercises/next")
+    @Transactional(readOnly = true)
+    public ExerciseSummaryWithoutAnswer nextExercise() {
+        return ExerciseSummaryWithoutAnswer.from(exerciseService.nextStudentExercise(currentUser()));
+    }
+
+    @PostMapping("/my/exercises/answer")
+    public ExerciseAnswerResponse submitAnswer(@RequestBody ExerciseAnswerParameter parameter) {
+        parameter.setAnswer(parameter.getAnswer().trim());
+        return exerciseService.submitStudentAnswer(currentUser(), parameter);
+    }
+}

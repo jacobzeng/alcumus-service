@@ -1,6 +1,7 @@
 package org.fangzz.alcumus.alcumusservice.service;
 
 
+import org.fangzz.alcumus.alcumusservice.dto.param.StudentRegisterParameter;
 import org.fangzz.alcumus.alcumusservice.dto.param.UserCreateParameter;
 import org.fangzz.alcumus.alcumusservice.model.User;
 
@@ -12,4 +13,6 @@ public interface UserService {
     User findByUsername(@NotEmpty String username);
 
     User createUser(@NotNull @Valid UserCreateParameter parameter);
+
+    User createStudentAccount(@NotNull @Valid StudentRegisterParameter parameter);
 }
