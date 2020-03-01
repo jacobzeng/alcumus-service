@@ -5,10 +5,10 @@ import javax.validation.constraints.Size;
 
 public class StudentRegisterParameter {
     @NotEmpty(message = "您的登录名不能为空")
-    @Size(min = 4, max = 30, message = "长度为4到30个字符")
+    @Size(min = 2, max = 10, message = "长度为2到10个字符")
     private String username;
     @NotEmpty(message = "您的昵称不能为空")
-    @Size(min = 4, max = 30, message = "长度为4到30个字符")
+    @Size(min = 2, max = 10, message = "长度为2到10个字符")
     private String nickname;
     @NotEmpty(message = "您的密码不能为空")
     @Size(min = 6, max = 20, message = "长度为6到20个字符")

@@ -13,14 +13,6 @@ public class ExerciseSummary extends BaseDto {
     private String[] tags;
     private boolean online = false;
 
-    public boolean isOnline() {
-        return online;
-    }
-
-    public void setOnline(boolean online) {
-        this.online = online;
-    }
-
     public static ExerciseSummary from(Exercise model) {
         if (null == model) {
             return null;
@@ -35,6 +27,14 @@ public class ExerciseSummary extends BaseDto {
         }
 
         return dto;
+    }
+
+    public boolean isOnline() {
+        return online;
+    }
+
+    public void setOnline(boolean online) {
+        this.online = online;
     }
 
     public String getName() {

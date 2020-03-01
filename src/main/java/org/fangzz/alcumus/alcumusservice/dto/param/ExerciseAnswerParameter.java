@@ -6,6 +6,9 @@ import javax.validation.constraints.NotNull;
 public class ExerciseAnswerParameter {
     @NotNull(message = "您的习题不能为空")
     private Integer exerciseId;
+    @NotEmpty(message = "您的答案不能为空")
+    private String answer;
+    private int counterOfRetry = 0;
 
     public String getAnswer() {
         return answer;
@@ -14,11 +17,6 @@ public class ExerciseAnswerParameter {
     public void setAnswer(String answer) {
         this.answer = answer;
     }
-
-    @NotEmpty(message = "您的答案不能为空")
-    private String answer;
-
-    private int counterOfRetry =0;
 
     public Integer getExerciseId() {
         return exerciseId;

@@ -1,6 +1,6 @@
 package org.fangzz.alcumus.alcumusservice.dto.param;
 
-public class UserActivityQueryParameter extends PageQueryParameter{
+public class UserActivityQueryParameter extends PageQueryParameter {
     private Integer userId;
 
     public Integer getUserId() {

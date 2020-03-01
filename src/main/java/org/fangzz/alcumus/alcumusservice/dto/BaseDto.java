@@ -15,6 +15,10 @@ public class BaseDto {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8:00")
     private Date modifiedAt;
 
+    public static void convert(BaseEntity model, BaseDto dto) {
+        BeanUtils.copyProperties(model, dto);
+    }
+
     public Integer getId() {
         return id;
     }
@@ -37,9 +41,5 @@ public class BaseDto {
 
     public void setModifiedAt(Date modifiedAt) {
         this.modifiedAt = modifiedAt;
-    }
-
-    public static void convert(BaseEntity model, BaseDto dto) {
-        BeanUtils.copyProperties(model, dto);
     }
 }

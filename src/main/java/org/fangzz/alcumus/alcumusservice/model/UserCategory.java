@@ -6,7 +6,7 @@ import javax.persistence.Table;
 
 @Entity
 @Table(name = "t_user_categories")
-public class UserCategory extends BaseEntity{
+public class UserCategory extends BaseEntity {
     @ManyToOne
     private User user;
     @ManyToOne

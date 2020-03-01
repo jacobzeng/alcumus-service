@@ -11,17 +11,23 @@ public class Exercise extends DeletedAbleEntity {
     private ExerciseCategory category;
     private String name;
 
-    @Column(name = "exercise_desc")
+    @Column(name = "exercise_desc", length = 4096)
     private String desc;
 
     private float difficulty = 0; //0到1之间
 
     private String answer; //答案
 
+    @Column(length = 4096)
     private String answerDesc; //答案解析
 
     @Column(name = "exercise_from")
     private String from; //练习题摘录自哪里
+    @Column(name = "exercise_online")
+    private boolean online = false;
+    @ManyToMany(fetch = FetchType.LAZY)
+    private Set<ExerciseTag> tags = new HashSet<ExerciseTag>();
+    private String tagNames;
 
     public boolean isOnline() {
         return online;
@@ -30,9 +36,6 @@ public class Exercise extends DeletedAbleEntity {
     public void setOnline(boolean online) {
         this.online = online;
     }
-
-    @Column(name = "exercise_online")
-    private boolean online = false;
 
     public ExerciseCategory getCategory() {
         return category;
@@ -97,10 +100,6 @@ public class Exercise extends DeletedAbleEntity {
     public void setTags(Set<ExerciseTag> tags) {
         this.tags = tags;
     }
-
-    @ManyToMany(fetch = FetchType.LAZY)
-    private Set<ExerciseTag> tags = new HashSet<ExerciseTag>();
-    private String tagNames;
 
     public String getTagNames() {
         return tagNames;

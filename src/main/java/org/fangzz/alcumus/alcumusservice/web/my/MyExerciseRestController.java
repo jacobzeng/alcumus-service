@@ -1,9 +1,6 @@
 package org.fangzz.alcumus.alcumusservice.web.my;
 
-import org.fangzz.alcumus.alcumusservice.dto.BaseDto;
-import org.fangzz.alcumus.alcumusservice.dto.ExerciseAnswerResponse;
-import org.fangzz.alcumus.alcumusservice.dto.ExerciseCategorySummary;
-import org.fangzz.alcumus.alcumusservice.dto.ExerciseSummaryWithoutAnswer;
+import org.fangzz.alcumus.alcumusservice.dto.*;
 import org.fangzz.alcumus.alcumusservice.dto.param.ExerciseAnswerParameter;
 import org.fangzz.alcumus.alcumusservice.dto.param.StudentSetCurrentCategoryParameter;
 import org.fangzz.alcumus.alcumusservice.model.UserCategory;
@@ -37,8 +34,8 @@ public class MyExerciseRestController extends UserAwareController {
 
     @GetMapping("/my/exercises/next")
     @Transactional(readOnly = true)
-    public ExerciseSummaryWithoutAnswer nextExercise() {
-        return ExerciseSummaryWithoutAnswer.from(exerciseService.nextStudentExercise(currentUser()));
+    public ExerciseSummary nextExercise() {
+        return ExerciseSummary.from(exerciseService.nextStudentExercise(currentUser()));
     }
 
     @PostMapping("/my/exercises/answer")

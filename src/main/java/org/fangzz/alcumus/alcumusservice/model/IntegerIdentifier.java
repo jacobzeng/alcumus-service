@@ -9,7 +9,7 @@ import java.io.Serializable;
 @MappedSuperclass
 public abstract class IntegerIdentifier implements Serializable {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
     public Integer getId() {

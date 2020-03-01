@@ -52,6 +52,7 @@ public class ExerciseServiceImpl implements ExerciseService {
 
     @Autowired
     private UserActivityService userActivityService;
+    private Random random = new Random();
 
     @Override
     public List<ExerciseCategory> listExerciseCategories(@NotNull ExerciseCategoryQueryParameter parameter,
@@ -266,8 +267,6 @@ public class ExerciseServiceImpl implements ExerciseService {
         return existed;
     }
 
-    private Random random = new Random();
-
     @Override
     public Exercise nextStudentExercise(@NotNull User currentUser) {
         ExerciseCategory category = getStudentCurrentCategory(currentUser);
@@ -294,6 +293,11 @@ public class ExerciseServiceImpl implements ExerciseService {
         if (!exercise.getAnswer().equals(parameter.getAnswer())) {
             result.setRight(false);
             userActivityService.addActivity(student, String.format("回答错了题目: %s", exercise.getName()));
+            if (parameter.getCounterOfRetry() > 1) {
+                result.setSubmitAble(false);
+                result.setAnswer(exercise.getAnswer());
+                result.setAnswerDesc(exercise.getAnswerDesc());
+            }
         } else {
             result.setRight(true);
             userActivityService.addActivity(student, String.format("回答对了题目: %s", exercise.getName()));

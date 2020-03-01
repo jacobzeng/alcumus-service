@@ -10,6 +10,7 @@ import javax.persistence.Table;
 public class UserActivity extends BaseEntity {
     @ManyToOne
     private User user;
+    private String log;
 
     public User getUser() {
         return user;
@@ -26,6 +27,4 @@ public class UserActivity extends BaseEntity {
     public void setLog(String log) {
         this.log = log;
     }
-
-    private String log;
 }

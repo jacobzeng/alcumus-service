@@ -15,6 +15,11 @@ public class User extends DeletedAbleEntity {
     private String username;
     @Column(length = 50)
     private String nickname;
+    @Column(length = 100)
+    private String password;
+    @ElementCollection(fetch = FetchType.EAGER)
+    @Enumerated(value = EnumType.STRING)
+    private List<UserRole> roles;
 
     public String getUsername() {
         return username;
@@ -47,12 +52,6 @@ public class User extends DeletedAbleEntity {
     public void setRoles(List<UserRole> roles) {
         this.roles = roles;
     }
-
-    @Column(length = 100)
-    private String password;
-    @ElementCollection(fetch = FetchType.EAGER)
-    @Enumerated(value = EnumType.STRING)
-    private List<UserRole> roles;
 
     public String[] getRolesArrayInString() {
         if (null == getRoles()) {
