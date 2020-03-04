@@ -2,9 +2,14 @@ package org.fangzz.alcumus.alcumusservice.repository;
 
 import org.fangzz.alcumus.alcumusservice.model.Exercise;
 import org.fangzz.alcumus.alcumusservice.model.ExerciseCategory;
+import org.fangzz.alcumus.alcumusservice.model.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import java.util.List;
 
 public interface ExerciseRepository extends AbstractRepository<Exercise> {
 
@@ -17,4 +22,8 @@ public interface ExerciseRepository extends AbstractRepository<Exercise> {
     long countByDeleted(boolean b);
 
     Page<Exercise> findByCategory(ExerciseCategory category, Pageable pageRequest);
+
+    @Query(value = "select a from Exercise a where a.category=:category and a.online=true and a.id not in(select b.exercise.id from UserExerciseLog b where b.user=:user)")
+    List<Exercise> nextStudentExercises(@Param("category") ExerciseCategory category, @Param("user") User user,
+                                        Pageable pageable);
 }

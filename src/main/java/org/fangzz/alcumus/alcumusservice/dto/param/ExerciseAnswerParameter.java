@@ -8,7 +8,7 @@ public class ExerciseAnswerParameter {
     private Integer exerciseId;
     @NotEmpty(message = "您的答案不能为空")
     private String answer;
-    private int counterOfRetry = 0;
+    private int counterOfRetry = 1;
 
     public String getAnswer() {
         return answer;

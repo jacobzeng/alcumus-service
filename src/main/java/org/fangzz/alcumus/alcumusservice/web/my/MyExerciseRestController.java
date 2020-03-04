@@ -2,6 +2,7 @@ package org.fangzz.alcumus.alcumusservice.web.my;
 
 import org.fangzz.alcumus.alcumusservice.dto.*;
 import org.fangzz.alcumus.alcumusservice.dto.param.ExerciseAnswerParameter;
+import org.fangzz.alcumus.alcumusservice.dto.param.ExerciseGiveUpParameter;
 import org.fangzz.alcumus.alcumusservice.dto.param.StudentSetCurrentCategoryParameter;
 import org.fangzz.alcumus.alcumusservice.model.UserCategory;
 import org.fangzz.alcumus.alcumusservice.service.ExerciseService;
@@ -42,5 +43,10 @@ public class MyExerciseRestController extends UserAwareController {
     public ExerciseAnswerResponse submitAnswer(@RequestBody ExerciseAnswerParameter parameter) {
         parameter.setAnswer(parameter.getAnswer().trim());
         return exerciseService.submitStudentAnswer(currentUser(), parameter);
+    }
+
+    @PostMapping("/my/exercises/give-up")
+    public ExerciseGiveUpResponse giveUpExercise(@RequestBody ExerciseGiveUpParameter parameter) {
+        return exerciseService.giveUpExercise(currentUser(), parameter);
     }
 }

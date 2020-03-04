@@ -1,11 +1,9 @@
 package org.fangzz.alcumus.alcumusservice.service;
 
 import org.fangzz.alcumus.alcumusservice.dto.ExerciseAnswerResponse;
+import org.fangzz.alcumus.alcumusservice.dto.ExerciseGiveUpResponse;
 import org.fangzz.alcumus.alcumusservice.dto.param.*;
-import org.fangzz.alcumus.alcumusservice.model.Exercise;
-import org.fangzz.alcumus.alcumusservice.model.ExerciseCategory;
-import org.fangzz.alcumus.alcumusservice.model.User;
-import org.fangzz.alcumus.alcumusservice.model.UserCategory;
+import org.fangzz.alcumus.alcumusservice.model.*;
 import org.springframework.data.domain.Page;
 
 import javax.validation.Valid;
@@ -47,4 +45,23 @@ public interface ExerciseService {
 
     ExerciseAnswerResponse submitStudentAnswer(@NotNull User student,
                                                @NotNull @Valid ExerciseAnswerParameter parameter);
+
+    ExerciseGiveUpResponse giveUpExercise(@NotNull User student, @NotNull @Valid ExerciseGiveUpParameter parameter);
+
+    ExerciseCategoryScoreDefinition createExerciseCategoryScoreDefinition(@NotNull Integer id,
+                                                                          @NotNull @Valid ExerciseCategoryScoreDefinitionCreateParameter parameter,
+                                                                          @NotNull User requireUser);
+
+    ExerciseCategoryScoreDefinition updateExerciseCategoryScoreDefinition(@NotNull Integer id,
+                                                                          @NotNull @Valid ExerciseCategoryScoreDefinitionUpdateParameter parameter,
+                                                                          @NotNull User requireUser);
+
+    void deleteExerciseCategoryScoreDefinition(@NotNull Integer id, @NotNull User requireUser);
+
+    List<ExerciseCategoryScoreDefinition> listScoreDefinitions(@NotNull Integer id, @NotNull User requireUser);
+
+    Page<ExerciseCategory> queryExerciseCategories(@NotNull ExerciseCategoryQueryParameter2 parameter,
+                                                   @NotNull User requireUser);
+
+    List<UserScore> listUserScores(@NotNull UserScoreListParameter parameter, @NotNull User user);
 }

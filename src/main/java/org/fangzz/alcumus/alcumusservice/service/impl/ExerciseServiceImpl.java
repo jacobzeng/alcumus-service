@@ -4,13 +4,12 @@ import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.fangzz.alcumus.alcumusservice.dto.ExerciseAnswerResponse;
+import org.fangzz.alcumus.alcumusservice.dto.ExerciseGiveUpResponse;
 import org.fangzz.alcumus.alcumusservice.dto.param.*;
+import org.fangzz.alcumus.alcumusservice.exception.BizException;
 import org.fangzz.alcumus.alcumusservice.exception.ResourceNotFoundException;
 import org.fangzz.alcumus.alcumusservice.model.*;
-import org.fangzz.alcumus.alcumusservice.repository.ExerciseCategoryRepository;
-import org.fangzz.alcumus.alcumusservice.repository.ExerciseRepository;
-import org.fangzz.alcumus.alcumusservice.repository.ExerciseTagRepository;
-import org.fangzz.alcumus.alcumusservice.repository.UserCategoryRepository;
+import org.fangzz.alcumus.alcumusservice.repository.*;
 import org.fangzz.alcumus.alcumusservice.service.ExerciseService;
 import org.fangzz.alcumus.alcumusservice.service.UserActivityService;
 import org.springframework.beans.BeanUtils;
@@ -52,6 +51,16 @@ public class ExerciseServiceImpl implements ExerciseService {
 
     @Autowired
     private UserActivityService userActivityService;
+
+    @Autowired
+    private UserExerciseLogRepository userExerciseLogRepository;
+
+    @Autowired
+    private ExerciseCategoryScoreDefinitionRepository exerciseCategoryScoreDefinitionRepository;
+
+    @Autowired
+    private UserScoreRepository userScoreRepository;
+
     private Random random = new Random();
 
     @Override
@@ -270,40 +279,183 @@ public class ExerciseServiceImpl implements ExerciseService {
     @Override
     public Exercise nextStudentExercise(@NotNull User currentUser) {
         ExerciseCategory category = getStudentCurrentCategory(currentUser);
-        if (null != category) {
-            long total = exerciseRepository.countByCategoryAndDeleted(category, false);
-
-            PageRequest pageRequest = PageRequest.of(random.nextInt((int) total), 1);
-            Page<Exercise> queryResult = exerciseRepository.findByCategory(category, pageRequest);
-            return queryResult.getContent().get(0);
-        } else {
-            long total = exerciseRepository.countByDeleted(false);
-            PageRequest pageRequest = PageRequest.of(random.nextInt((int) total), 1);
-            Page<Exercise> queryResult = exerciseRepository.findAll(pageRequest);
-            return queryResult.getContent().get(0);
+        if (null == category) {
+            throw new BizException("请您先选择一个分类");
         }
+        //1. 查找当前有没有正在做的题
+        UserExerciseLog log = userExerciseLogRepository
+                .findByUserAndCategoryAndStatus(currentUser, category, UserExerciseLog.STATUS_CURRENT);
+        if (null != log) {
+            return log.getExercise();
+        }
+
+        //2. 选择一道题目
+        long total = exerciseRepository.countByCategoryAndDeleted(category, false);
+        PageRequest pageRequest = PageRequest.of(0, 1);
+        List<Exercise> exercises = exerciseRepository.nextStudentExercises(category, currentUser, pageRequest);
+        if (exercises.isEmpty()) {
+            throw new BizException("抱歉，该分类没有更多的练习题了");
+        }
+        Exercise result = exercises.get(0);
+
+        UserExerciseLog newLog = new UserExerciseLog();
+        newLog.setCategory(category);
+        newLog.setExercise(result);
+        newLog.setUser(currentUser);
+        newLog.setStatus(UserExerciseLog.STATUS_CURRENT);
+        userExerciseLogRepository.save(newLog);
+
+        return result;
     }
 
     @Override
     public ExerciseAnswerResponse submitStudentAnswer(@NotNull User student,
                                                       @NotNull @Valid ExerciseAnswerParameter parameter) {
         Exercise exercise = findExerciseById(parameter.getExerciseId());
+        UserExerciseLog log = userExerciseLogRepository.findByUserAndExercise(student, exercise);
+
         ExerciseAnswerResponse result = new ExerciseAnswerResponse();
 
         if (!exercise.getAnswer().equals(parameter.getAnswer())) {
             result.setRight(false);
+
+            //2次都错了
+            log.setStatus(UserExerciseLog.STATUS_WRONG);
             userActivityService.addActivity(student, String.format("回答错了题目: %s", exercise.getName()));
-            if (parameter.getCounterOfRetry() > 1) {
-                result.setSubmitAble(false);
-                result.setAnswer(exercise.getAnswer());
-                result.setAnswerDesc(exercise.getAnswerDesc());
-            }
+
         } else {
             result.setRight(true);
             userActivityService.addActivity(student, String.format("回答对了题目: %s", exercise.getName()));
+
+            if (parameter.getCounterOfRetry() == 1) {
+                //1次答对
+                log.setStatus(UserExerciseLog.STATUS_RIGHT_FIRST_TIME);
+            } else {
+                //第2次答对
+                log.setStatus(UserExerciseLog.STATUS_RIGHT_SECOND_TIME);
+            }
+
+        }
+        userExerciseLogRepository.save(log);
+        addUserScore(exercise, log.getStatus(), student);
+        return result;
+    }
+
+    private void addUserScore(Exercise exercise, int status, User student) {
+        List<ExerciseCategoryScoreDefinition> scoreDefinitions = exerciseCategoryScoreDefinitionRepository
+                .findByExerciseAndStatus(exercise, status);
+        for (ExerciseCategoryScoreDefinition scoreDefinition : scoreDefinitions) {
+            ExerciseCategory category = scoreDefinition.getCategory();
+            UserScore existed = userScoreRepository.findByUserAndCategory(student, category);
+            if (null == existed) {
+                existed = new UserScore();
+                existed.setCategory(category);
+                existed.setUser(student);
+                existed.setScore(0);
+            }
+
+            existed.setScore(existed.getScore() + scoreDefinition.getScore());
+            userScoreRepository.save(existed);
+        }
+    }
+
+    @Override
+    public ExerciseGiveUpResponse giveUpExercise(@NotNull User student,
+                                                 @NotNull @Valid ExerciseGiveUpParameter parameter) {
+        Exercise exercise = findExerciseById(parameter.getExerciseId());
+        UserExerciseLog log = userExerciseLogRepository.findByUserAndExercise(student, exercise);
+        log.setStatus(UserExerciseLog.STATUS_GIVE_UP);
+        userExerciseLogRepository.save(log);
+
+        addUserScore(exercise, log.getStatus(), student);
+
+        userActivityService.addActivity(student, String.format("放弃了题目: %s", exercise.getName()));
+
+        ExerciseGiveUpResponse result = new ExerciseGiveUpResponse();
+        result.setResult("您放弃了当前习题");
+        return result;
+    }
+
+    @Override
+    public ExerciseCategoryScoreDefinition createExerciseCategoryScoreDefinition(@NotNull Integer id,
+                                                                                 @NotNull @Valid ExerciseCategoryScoreDefinitionCreateParameter parameter,
+                                                                                 @NotNull User requireUser) {
+        Exercise exercise = findExerciseById(id, requireUser);
+        ExerciseCategory category = findExerciseCategoryById(parameter.getCategoryId(), requireUser);
+        ExerciseCategoryScoreDefinition existed = exerciseCategoryScoreDefinitionRepository
+                .findByCategoryAndExerciseAndStatus(category, exercise, parameter.getStatus());
+        if (existed != null) {
+            throw new BizException("该积分配置已经存在，请直接修改");
         }
 
-        return result;
+        ExerciseCategoryScoreDefinition newOne = new ExerciseCategoryScoreDefinition();
+        newOne.setCategory(category);
+        newOne.setExercise(exercise);
+        newOne.setScore(parameter.getScore());
+        newOne.setStatus(parameter.getStatus());
+        return exerciseCategoryScoreDefinitionRepository.save(newOne);
+    }
+
+    @Override
+    public ExerciseCategoryScoreDefinition updateExerciseCategoryScoreDefinition(@NotNull Integer id,
+                                                                                 @NotNull @Valid ExerciseCategoryScoreDefinitionUpdateParameter parameter,
+                                                                                 @NotNull User requireUser) {
+        ExerciseCategoryScoreDefinition existed = exerciseCategoryScoreDefinitionRepository.findById(id).orElse(null);
+        if (null == existed) {
+            throw new ResourceNotFoundException();
+        }
+        existed.setScore(parameter.getScore());
+        return exerciseCategoryScoreDefinitionRepository.save(existed);
+    }
+
+    @Override
+    public void deleteExerciseCategoryScoreDefinition(@NotNull Integer id, @NotNull User requireUser) {
+        ExerciseCategoryScoreDefinition existed = exerciseCategoryScoreDefinitionRepository.findById(id).orElse(null);
+        if (null == existed) {
+            throw new ResourceNotFoundException();
+        }
+        exerciseCategoryScoreDefinitionRepository.delete(existed);
+    }
+
+    @Override
+    public List<ExerciseCategoryScoreDefinition> listScoreDefinitions(@NotNull Integer id, @NotNull User requireUser) {
+        Exercise exercise = findExerciseById(id, requireUser);
+        return exerciseCategoryScoreDefinitionRepository.findByExercise(exercise);
+    }
+
+    @Override
+    public Page<ExerciseCategory> queryExerciseCategories(@NotNull ExerciseCategoryQueryParameter2 parameter,
+                                                          @NotNull User requireUser) {
+        PageRequest pageable = PageRequest.of(parameter.getStart(), parameter.getLimit(), parameter.genSort());
+        return exerciseCategoryRepository.findAll(new Specification() {
+            @Override
+            public Predicate toPredicate(Root root, CriteriaQuery query, CriteriaBuilder criteriaBuilder) {
+                List<Predicate> predicateList = Lists.newArrayList();
+                predicateList.add(criteriaBuilder.equal(root.get("deleted"), false));
+
+                if (!StringUtils.isEmpty(parameter.getNameLike())) {
+                    predicateList.add(criteriaBuilder.like(root.get("name"), "%" + parameter.getNameLike() + "%"));
+                }
+                return criteriaBuilder.and(predicateList.toArray(new Predicate[]{}));
+            }
+        }, pageable);
+    }
+
+    @Override
+    public List<UserScore> listUserScores(@NotNull UserScoreListParameter parameter, @NotNull User user) {
+        return userScoreRepository.findAll(new Specification() {
+            @Override
+            public Predicate toPredicate(Root root, CriteriaQuery query, CriteriaBuilder criteriaBuilder) {
+                List<Predicate> predicateList = Lists.newArrayList();
+                if (null != parameter.getUserId()) {
+                    predicateList.add(criteriaBuilder.equal(root.get("user").get("id"), parameter.getUserId()));
+                }
+                if (null != parameter.getCategoryId()) {
+                    predicateList.add(criteriaBuilder.equal(root.get("category").get("id"), parameter.getCategoryId()));
+                }
+                return criteriaBuilder.and(predicateList.toArray(new Predicate[]{}));
+            }
+        }, Sort.by(Sort.Direction.DESC, "score"));
     }
 
     private Exercise findExerciseById(Integer exerciseId) {
