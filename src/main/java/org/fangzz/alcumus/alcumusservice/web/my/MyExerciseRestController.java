@@ -22,7 +22,11 @@ public class MyExerciseRestController extends UserAwareController {
     @GetMapping("/my/exercise-categories/focus")
     @Transactional(readOnly = true)
     public ExerciseCategorySummary currentFocus() {
-        return ExerciseCategorySummary.from(exerciseService.getStudentCurrentCategory(currentUser()));
+        UserCategory userCategory = exerciseService.getStudentCurrentCategory(currentUser());
+        if (null == userCategory) {
+            return null;
+        }
+        return ExerciseCategorySummary.from(userCategory.getCategory());
     }
 
     @PostMapping("/my/exercise-categories/focus")

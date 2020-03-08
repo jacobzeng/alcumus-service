@@ -1,10 +1,7 @@
 package org.fangzz.alcumus.alcumusservice.model;
 
 
-import javax.persistence.Entity;
-import javax.persistence.FetchType;
-import javax.persistence.ManyToOne;
-import javax.persistence.Table;
+import javax.persistence.*;
 
 @Entity
 @Table(name = "t_exercise_categories")
@@ -18,6 +15,17 @@ public class ExerciseCategory extends DeletedAbleEntity {
      * 编码,规则就是父类code+id,如果没有父类,则等于id
      */
     private String code;
+
+    @Column(name = "category_level")
+    private int level = 0;
+
+    public int getLevel() {
+        return level;
+    }
+
+    public void setLevel(int level) {
+        this.level = level;
+    }
 
     public String getName() {
         return name;

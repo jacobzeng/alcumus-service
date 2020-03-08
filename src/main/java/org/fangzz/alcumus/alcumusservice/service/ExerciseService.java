@@ -7,6 +7,7 @@ import org.fangzz.alcumus.alcumusservice.model.*;
 import org.springframework.data.domain.Page;
 
 import javax.validation.Valid;
+import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
 import java.util.List;
 
@@ -34,7 +35,7 @@ public interface ExerciseService {
 
     Page<Exercise> queryExercises(@NotNull ExerciseQueryParameter parameter, @NotNull User requireUser);
 
-    ExerciseCategory getStudentCurrentCategory(@NotNull User student);
+    UserCategory getStudentCurrentCategory(@NotNull User student);
 
     List<ExerciseCategory> listExerciseCategories(@NotNull ExerciseCategoryQueryParameter parameter);
 
@@ -64,4 +65,10 @@ public interface ExerciseService {
                                                    @NotNull User requireUser);
 
     List<UserScore> listUserScores(@NotNull UserScoreListParameter parameter, @NotNull User user);
+
+    ExerciseCategory findExerciseCategoryByName(@NotEmpty String name);
+
+
+    ExerciseCategory createExerciseCategoryIfNotExist(@NotEmpty String name, ExerciseCategory parent,
+                                                      @NotNull User currentUser);
 }

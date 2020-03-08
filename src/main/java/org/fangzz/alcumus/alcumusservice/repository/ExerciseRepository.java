@@ -9,6 +9,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 public interface ExerciseRepository extends AbstractRepository<Exercise> {
@@ -23,7 +24,9 @@ public interface ExerciseRepository extends AbstractRepository<Exercise> {
 
     Page<Exercise> findByCategory(ExerciseCategory category, Pageable pageRequest);
 
-    @Query(value = "select a from Exercise a where a.category=:category and a.online=true and a.id not in(select b.exercise.id from UserExerciseLog b where b.user=:user)")
+    @Query(value = "select a from Exercise a where a.category=:category and a.online=true and a.difficulty>:minDifficulty and a.difficulty<=:maxDifficulty and a.id not in(select b.exercise.id from UserExerciseLog b where b.user=:user)")
     List<Exercise> nextStudentExercises(@Param("category") ExerciseCategory category, @Param("user") User user,
+                                        @Param("minDifficulty") BigDecimal minDifficulty,
+                                        @Param("maxDifficulty") BigDecimal maxDifficulty,
                                         Pageable pageable);
 }

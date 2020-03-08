@@ -3,10 +3,12 @@ package org.fangzz.alcumus.alcumusservice.dto;
 import com.google.common.base.Strings;
 import org.fangzz.alcumus.alcumusservice.model.Exercise;
 
+import java.math.BigDecimal;
+
 public class ExerciseSummary extends BaseDto {
     private String name;
     private String desc;
-    private float difficulty = 0; //0到1之间
+    private BigDecimal difficulty = null; //0到1之间
     private String answer; //答案
     private String answerDesc; //答案解析
     private String from; //练习题摘录自哪里
@@ -53,11 +55,11 @@ public class ExerciseSummary extends BaseDto {
         this.desc = desc;
     }
 
-    public float getDifficulty() {
+    public BigDecimal getDifficulty() {
         return difficulty;
     }
 
-    public void setDifficulty(float difficulty) {
+    public void setDifficulty(BigDecimal difficulty) {
         this.difficulty = difficulty;
     }
 

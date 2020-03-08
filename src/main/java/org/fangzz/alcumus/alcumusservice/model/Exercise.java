@@ -1,6 +1,7 @@
 package org.fangzz.alcumus.alcumusservice.model;
 
 import javax.persistence.*;
+import java.math.BigDecimal;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -14,7 +15,7 @@ public class Exercise extends DeletedAbleEntity {
     @Column(name = "exercise_desc", length = 4096)
     private String desc;
 
-    private float difficulty = 0; //0到1之间
+    private BigDecimal difficulty = new BigDecimal(0); //0到1之间
 
     private String answer; //答案
 
@@ -61,11 +62,11 @@ public class Exercise extends DeletedAbleEntity {
         this.desc = desc;
     }
 
-    public float getDifficulty() {
+    public BigDecimal getDifficulty() {
         return difficulty;
     }
 
-    public void setDifficulty(float difficulty) {
+    public void setDifficulty(BigDecimal difficulty) {
         this.difficulty = difficulty;
     }
 

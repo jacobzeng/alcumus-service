@@ -1,5 +1,9 @@
 package org.fangzz.alcumus.alcumusservice.web.mgr;
 
+import com.google.common.base.Charsets;
+import com.google.common.base.Strings;
+import com.google.common.collect.Maps;
+import com.google.common.io.ByteSource;
 import org.fangzz.alcumus.alcumusservice.dto.ExerciseCategoryScoreDefinitionSummary;
 import org.fangzz.alcumus.alcumusservice.dto.ExerciseCategorySummary;
 import org.fangzz.alcumus.alcumusservice.dto.ExerciseSummary;
@@ -14,8 +18,13 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -112,5 +121,96 @@ public class ExerciseMgrRestController extends UserAwareController {
     public List<ExerciseCategoryScoreDefinitionSummary> listScoreDefinitions(@PathVariable Integer id) {
         List<ExerciseCategoryScoreDefinition> definitions = exerciseService.listScoreDefinitions(id, requireUser());
         return definitions.stream().map(ExerciseCategoryScoreDefinitionSummary::from).collect(Collectors.toList());
+    }
+
+    @PostMapping("/mgr/import/exercises")
+    public Map importExercises(@RequestParam("file") MultipartFile file,
+                               @RequestParam("parentCategory") String parentCategoryName) throws IOException {
+        Map result = Maps.newHashMap();
+        if (file.isEmpty()) {
+            return result;
+        }
+
+        ByteSource byteSource = new ByteSource() {
+            @Override
+            public InputStream openStream() throws IOException {
+                return file.getInputStream();
+            }
+        };
+
+        ExerciseCategory parentCategory = exerciseService.findExerciseCategoryByName(parentCategoryName);
+        List<String> lines = byteSource.asCharSource(Charsets.UTF_8).readLines();
+        String secondCategoryName = null;
+        ExerciseCategory secondCategory = null;
+        String thirdCategoryName = null;
+        ExerciseCategory thirdCategory = null;
+
+        String exerciseName = null;
+        String exerciseDesc = null;
+        String exerciseAnswer = null;
+        String exerciseAnswerDesc = null;
+        BigDecimal exerciseDifficulty = null;
+        boolean exerciseEnd = true;
+
+        for (String line : lines) {
+            line = line.trim();
+            if (Strings.isNullOrEmpty(line)) {
+                continue;
+            }
+            if (line.startsWith("标题") || line.startsWith("题目") || line.startsWith("答案") || line.startsWith("解析")
+                    || line.startsWith("难度")) {
+                if (line.startsWith("标题：")) {
+                    exerciseEnd = false;
+                    exerciseName = line.split("标题：")[1];
+                } else if (line.startsWith("题目：")) {
+                    exerciseDesc = line.split("题目：")[1];
+                } else if (line.startsWith("答案：")) {
+                    exerciseAnswer = line.split("答案：")[1];
+                } else if (line.startsWith("解析：")) {
+                    exerciseAnswerDesc = line.split("解析：")[1];
+                } else if (line.startsWith("难度：")) {
+                    exerciseDifficulty = new BigDecimal(line.split("难度：")[1]);
+
+                    ExerciseCreateParameter exerciseCreateParameter = new ExerciseCreateParameter();
+                    exerciseCreateParameter.setCategoryId(thirdCategory.getId());
+                    exerciseCreateParameter.setOnline(true);
+                    exerciseCreateParameter.setName(exerciseName);
+                    exerciseCreateParameter.setDesc(exerciseDesc);
+                    exerciseCreateParameter.setAnswer(exerciseAnswer);
+                    exerciseCreateParameter.setAnswerDesc(exerciseAnswerDesc);
+                    exerciseCreateParameter.setDifficulty(exerciseDifficulty);
+
+                    exerciseService.createExercise(exerciseCreateParameter, requireUser());
+                    exerciseEnd = true;
+                    exerciseName = null;
+                    exerciseDesc = null;
+                    exerciseAnswer = null;
+                    exerciseAnswerDesc = null;
+                    exerciseDifficulty = null;
+
+                }
+
+            } else if (!exerciseEnd) {
+                //一道题还未结束，那就是有内容换行了
+                if (exerciseDifficulty == null) {
+                    //还未设置难度,上一行是问题答案解析
+                    exerciseAnswerDesc += "\\r\\n" + line;
+                }
+
+            } else {
+                if (secondCategoryName == null) {
+                    secondCategoryName = line;
+                    secondCategory = exerciseService.createExerciseCategoryIfNotExist(secondCategoryName,
+                            parentCategory, requireUser());
+
+                } else {
+                    thirdCategoryName = line;
+                    thirdCategory = exerciseService.createExerciseCategoryIfNotExist(thirdCategoryName,
+                            secondCategory, requireUser());
+                }
+            }
+        }
+
+        return result;
     }
 }

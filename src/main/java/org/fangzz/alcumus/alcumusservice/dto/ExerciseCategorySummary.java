@@ -5,6 +5,15 @@ import org.fangzz.alcumus.alcumusservice.model.ExerciseCategory;
 public class ExerciseCategorySummary extends BaseDto {
     private String name;
     private String code;
+    private int level;
+
+    public int getLevel() {
+        return level;
+    }
+
+    public void setLevel(int level) {
+        this.level = level;
+    }
 
     public static ExerciseCategorySummary from(ExerciseCategory model) {
         if (null == model) {

@@ -27,7 +27,10 @@ import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
 import javax.validation.Valid;
+import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
@@ -96,6 +99,9 @@ public class ExerciseServiceImpl implements ExerciseService {
 
         if (null != parent) {
             model.setParent(parent);
+            model.setLevel(parent.getLevel() + 1);
+        } else {
+            model.setLevel(0);
         }
         model = exerciseCategoryRepository.save(model);
 
@@ -144,6 +150,9 @@ public class ExerciseServiceImpl implements ExerciseService {
         ExerciseCategory category = null;
         if (null != parameter.getCategoryId()) {
             category = findExerciseCategoryById(parameter.getCategoryId(), requireUser);
+            if (category.getLevel() != 2) {
+                throw new BizException("在最底层分类才能添加习题");
+            }
         }
         Exercise model = new Exercise();
         model.setCategory(category);
@@ -224,10 +233,10 @@ public class ExerciseServiceImpl implements ExerciseService {
     }
 
     @Override
-    public ExerciseCategory getStudentCurrentCategory(@NotNull User student) {
+    public UserCategory getStudentCurrentCategory(@NotNull User student) {
         UserCategory existed = userCategoryRepository.findByUserAndCurrent(student, true);
         if (existed != null) {
-            return existed.getCategory();
+            return existed;
         } else {
             return null;
         }
@@ -261,15 +270,15 @@ public class ExerciseServiceImpl implements ExerciseService {
         }
 
         ExerciseCategory category = findExerciseCategoryById(parameter.getCategoryId());
+        if (category.getLevel() != 2) {
+            throw new BizException("您只能选择最底层分类");
+        }
         UserCategory existed = userCategoryRepository.findByUserAndCategory(currentUser, category);
         if (null == existed) {
             existed = new UserCategory();
             existed.setCategory(category);
             existed.setUser(currentUser);
-            existed.setCounterOfDone(0);
-            existed.setCounterOfRight(0);
-            existed.setCounterOfWrong(0);
-
+            existed.setScore(10); //初始化10分
         }
         existed.setCurrent(true);
         existed = userCategoryRepository.save(existed);
@@ -278,10 +287,12 @@ public class ExerciseServiceImpl implements ExerciseService {
 
     @Override
     public Exercise nextStudentExercise(@NotNull User currentUser) {
-        ExerciseCategory category = getStudentCurrentCategory(currentUser);
-        if (null == category) {
+        UserCategory userCategory = getStudentCurrentCategory(currentUser);
+        if (null == userCategory) {
             throw new BizException("请您先选择一个分类");
         }
+        ExerciseCategory category = userCategory.getCategory();
+
         //1. 查找当前有没有正在做的题
         UserExerciseLog log = userExerciseLogRepository
                 .findByUserAndCategoryAndStatus(currentUser, category, UserExerciseLog.STATUS_CURRENT);
@@ -290,12 +301,78 @@ public class ExerciseServiceImpl implements ExerciseService {
         }
 
         //2. 选择一道题目
-        long total = exerciseRepository.countByCategoryAndDeleted(category, false);
-        PageRequest pageRequest = PageRequest.of(0, 1);
-        List<Exercise> exercises = exerciseRepository.nextStudentExercises(category, currentUser, pageRequest);
-        if (exercises.isEmpty()) {
-            throw new BizException("抱歉，该分类没有更多的练习题了");
+        int difficultyLevel = userCategory.getDifficultyLevel();
+        List<Exercise> exercises = Lists.newArrayList();
+        while (exercises.isEmpty()) {
+            BigDecimal maxDifficulty = new BigDecimal(1.0);
+            BigDecimal minDifficulty = new BigDecimal(0.9);
+            switch (difficultyLevel) {
+                case 2:
+                    maxDifficulty = new BigDecimal(0.90f);
+                    minDifficulty = new BigDecimal(0.80f);
+                    break;
+                case 3:
+                    maxDifficulty = new BigDecimal(0.80f);
+                    minDifficulty = new BigDecimal(0.70f);
+                    break;
+                case 4:
+                    maxDifficulty = new BigDecimal(0.70f);
+                    minDifficulty = new BigDecimal(0.60f);
+                    break;
+                case 5:
+                    maxDifficulty = new BigDecimal(0.60f);
+                    minDifficulty = new BigDecimal(0.50f);
+                    break;
+                case 6:
+                    maxDifficulty = new BigDecimal(0.50f);
+                    minDifficulty = new BigDecimal(0.45f);
+                    break;
+                case 7:
+                    maxDifficulty = new BigDecimal(0.45f);
+                    minDifficulty = new BigDecimal(0.40f);
+                    break;
+                case 8:
+                    maxDifficulty = new BigDecimal(0.40f);
+                    minDifficulty = new BigDecimal(0.35f);
+                    break;
+                case 9:
+                    maxDifficulty = new BigDecimal(0.35f);
+                    minDifficulty = new BigDecimal(0.30f);
+                    break;
+                case 10:
+                    maxDifficulty = new BigDecimal(0.30f);
+                    minDifficulty = new BigDecimal(0.25f);
+                    break;
+                case 11:
+                    maxDifficulty = new BigDecimal(0.25f);
+                    minDifficulty = new BigDecimal(0.20f);
+                    break;
+                case 12:
+                    maxDifficulty = new BigDecimal(0.20f);
+                    minDifficulty = new BigDecimal(0.15f);
+                    break;
+                case 13:
+                    maxDifficulty = new BigDecimal(0.15f);
+                    minDifficulty = new BigDecimal(0.10f);
+                    break;
+                case 14:
+                    maxDifficulty = new BigDecimal(0.10f);
+                    minDifficulty = new BigDecimal(0.05f);
+                    break;
+                case 15:
+                    maxDifficulty = new BigDecimal(0.5f);
+                    minDifficulty = new BigDecimal(0.0f);
+                    break;
+            }
+            PageRequest pageRequest = PageRequest.of(0, 1);
+            exercises = exerciseRepository
+                    .nextStudentExercises(category, currentUser, minDifficulty, maxDifficulty, pageRequest);
+            if (exercises.isEmpty() && difficultyLevel > 15) {
+                throw new BizException("抱歉，该分类没有更多的练习题了");
+            }
+            difficultyLevel++;
         }
+
         Exercise result = exercises.get(0);
 
         UserExerciseLog newLog = new UserExerciseLog();
@@ -337,26 +414,72 @@ public class ExerciseServiceImpl implements ExerciseService {
 
         }
         userExerciseLogRepository.save(log);
-        addUserScore(exercise, log.getStatus(), student);
+        calculateUserScore(exercise, log.getStatus(), student);
         return result;
     }
 
-    private void addUserScore(Exercise exercise, int status, User student) {
-        List<ExerciseCategoryScoreDefinition> scoreDefinitions = exerciseCategoryScoreDefinitionRepository
-                .findByExerciseAndStatus(exercise, status);
-        for (ExerciseCategoryScoreDefinition scoreDefinition : scoreDefinitions) {
-            ExerciseCategory category = scoreDefinition.getCategory();
-            UserScore existed = userScoreRepository.findByUserAndCategory(student, category);
-            if (null == existed) {
-                existed = new UserScore();
-                existed.setCategory(category);
-                existed.setUser(student);
-                existed.setScore(0);
-            }
-
-            existed.setScore(existed.getScore() + scoreDefinition.getScore());
-            userScoreRepository.save(existed);
+    private void calculateUserScore(Exercise exercise, int status, User student) {
+        UserCategory category = userCategoryRepository.findByUserAndCategory(student, exercise.getCategory());
+        switch (status) {
+            case UserExerciseLog.STATUS_RIGHT_FIRST_TIME:
+                category.setDifficultyLevel(category.getDifficultyLevel() + 2);
+                category.setCounterOfFirstRight(category.getCounterOfFirstRight() + 1);
+                break;
+            case UserExerciseLog.STATUS_RIGHT_SECOND_TIME:
+                category.setCounterOfSecondRight(category.getCounterOfSecondRight() + 1);
+                category.setDifficultyLevel(category.getDifficultyLevel() + 2);
+                break;
+            case UserExerciseLog.STATUS_WRONG:
+                category.setCounterOfWrong(category.getCounterOfWrong() + 1);
+                category.setDifficultyLevel(category.getDifficultyLevel() - 1);
+                break;
+            case UserExerciseLog.STATUS_GIVE_UP:
+                category.setCounterOfWrong(category.getCounterOfGiveup() + 1);
+                break;
         }
+
+        /**
+         * （1）第一次做对一道难度系数为 a 的题目，积分增加=取整 round(10/a)
+         * （2）第一次做错第二次做对，积分增加为一次做对的 60%，=取整 round(6/a)
+         * （3）一错二错/放弃，积分减少为一次做对的 40%, =取整 round(4/a)
+         * （4）难度系数<=0.05 的题目，统一按照难度系数 0.05 处理。也就是说做对一道题最多加分 200 封顶
+         */
+        int score = 0;
+        BigDecimal difficulty = exercise.getDifficulty();
+        if (difficulty.floatValue() <= 0.05) {
+            difficulty = new BigDecimal(0.05);
+        }
+        switch (status) {
+            case UserExerciseLog.STATUS_RIGHT_FIRST_TIME:
+                score = new BigDecimal(10).divide(difficulty, 0, RoundingMode.HALF_EVEN).intValue();
+                break;
+            case UserExerciseLog.STATUS_RIGHT_SECOND_TIME:
+                score = Math.round(new BigDecimal(6).divide(difficulty, 0, RoundingMode.HALF_EVEN).intValue());
+                break;
+            case UserExerciseLog.STATUS_GIVE_UP:
+            case UserExerciseLog.STATUS_WRONG:
+                score = -Math.round(new BigDecimal(4).divide(difficulty, 0, RoundingMode.HALF_EVEN).intValue());
+                break;
+        }
+
+        category.setScore(category.getScore() + score);
+        userCategoryRepository.save(category);
+//        List<ExerciseCategoryScoreDefinition> scoreDefinitions = exerciseCategoryScoreDefinitionRepository
+//                .findByExerciseAndStatus(exercise, status);
+
+//
+//        for (ExerciseCategoryScoreDefinition scoreDefinition : scoreDefinitions) {
+//            ExerciseCategory category = scoreDefinition.getCategory();
+//            UserScore existed = userScoreRepository.findByUserAndCategory(student, category);
+//            if (null == existed) {
+//                existed = new UserScore();
+//                existed.setCategory(category);
+//                existed.setUser(student);
+//                existed.setScore(0);
+//            }
+//            existed.setScore(existed.getScore() + scoreDefinition.getScore());
+//            userScoreRepository.save(existed);
+//        }
     }
 
     @Override
@@ -367,7 +490,7 @@ public class ExerciseServiceImpl implements ExerciseService {
         log.setStatus(UserExerciseLog.STATUS_GIVE_UP);
         userExerciseLogRepository.save(log);
 
-        addUserScore(exercise, log.getStatus(), student);
+        calculateUserScore(exercise, log.getStatus(), student);
 
         userActivityService.addActivity(student, String.format("放弃了题目: %s", exercise.getName()));
 
@@ -456,6 +579,26 @@ public class ExerciseServiceImpl implements ExerciseService {
                 return criteriaBuilder.and(predicateList.toArray(new Predicate[]{}));
             }
         }, Sort.by(Sort.Direction.DESC, "score"));
+    }
+
+    @Override
+    public ExerciseCategory findExerciseCategoryByName(@NotEmpty String name) {
+        return exerciseCategoryRepository.findByName(name);
+    }
+
+    @Override
+    public ExerciseCategory createExerciseCategoryIfNotExist(@NotEmpty String name, ExerciseCategory parent,
+                                                             @NotNull User currentUser) {
+        ExerciseCategory existed = findExerciseCategoryByName(name);
+        if (null == existed) {
+            ExerciseCategoryCreateParameter categoryCreateParameter = new ExerciseCategoryCreateParameter();
+            categoryCreateParameter.setName(name);
+            if (null != parent) {
+                categoryCreateParameter.setParentId(parent.getId());
+            }
+            existed = createExerciseCategory(categoryCreateParameter, currentUser);
+        }
+        return existed;
     }
 
     private Exercise findExerciseById(Integer exerciseId) {

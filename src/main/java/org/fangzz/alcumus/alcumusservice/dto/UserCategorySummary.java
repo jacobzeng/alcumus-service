@@ -1,16 +1,19 @@
-package org.fangzz.alcumus.alcumusservice.model;
+package org.fangzz.alcumus.alcumusservice.dto;
 
-import javax.persistence.Entity;
-import javax.persistence.ManyToOne;
-import javax.persistence.Table;
+import org.fangzz.alcumus.alcumusservice.model.UserCategory;
 
-@Entity
-@Table(name = "t_user_categories")
-public class UserCategory extends BaseEntity {
-    @ManyToOne
-    private User user;
-    @ManyToOne
-    private ExerciseCategory category;
+public class UserCategorySummary extends BaseDto {
+    public final static UserCategorySummary from(UserCategory model) {
+        if (null == model) {
+            return null;
+        }
+        UserCategorySummary dto = new UserCategorySummary();
+        BaseDto.convert(model, dto);
+        dto.setCategory(ExerciseCategorySummary.from(model.getCategory()));
+        return dto;
+    }
+
+    private ExerciseCategorySummary category;
 
     private boolean current;
 
@@ -21,17 +24,20 @@ public class UserCategory extends BaseEntity {
     private int score = 0;
     private int difficultyLevel = 1;
 
-    public int getDifficultyLevel() {
-        return difficultyLevel;
+    public ExerciseCategorySummary getCategory() {
+        return category;
     }
 
-    public void setDifficultyLevel(int difficultyLevel) {
-        if (difficultyLevel > 15) {
-            difficultyLevel = 15;
-        } else if (difficultyLevel < 1) {
-            difficultyLevel = 1;
-        }
-        this.difficultyLevel = difficultyLevel;
+    public void setCategory(ExerciseCategorySummary category) {
+        this.category = category;
+    }
+
+    public boolean isCurrent() {
+        return current;
+    }
+
+    public void setCurrent(boolean current) {
+        this.current = current;
     }
 
     public int getCounterOfFirstRight() {
@@ -74,27 +80,11 @@ public class UserCategory extends BaseEntity {
         this.score = score;
     }
 
-    public User getUser() {
-        return user;
+    public int getDifficultyLevel() {
+        return difficultyLevel;
     }
 
-    public void setUser(User user) {
-        this.user = user;
-    }
-
-    public ExerciseCategory getCategory() {
-        return category;
-    }
-
-    public void setCategory(ExerciseCategory category) {
-        this.category = category;
-    }
-
-    public boolean isCurrent() {
-        return current;
-    }
-
-    public void setCurrent(boolean current) {
-        this.current = current;
+    public void setDifficultyLevel(int difficultyLevel) {
+        this.difficultyLevel = difficultyLevel;
     }
 }
