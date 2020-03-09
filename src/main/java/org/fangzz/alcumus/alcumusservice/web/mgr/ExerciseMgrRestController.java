@@ -198,15 +198,28 @@ public class ExerciseMgrRestController extends UserAwareController {
                 }
 
             } else {
+
+
                 if (secondCategoryName == null) {
                     secondCategoryName = line;
                     secondCategory = exerciseService.createExerciseCategoryIfNotExist(secondCategoryName,
                             parentCategory, requireUser());
 
                 } else {
-                    thirdCategoryName = line;
-                    thirdCategory = exerciseService.createExerciseCategoryIfNotExist(thirdCategoryName,
-                            secondCategory, requireUser());
+                    String categoryIndex = line.split("\\.")[0];
+                    String currentCategoryIndex = secondCategoryName.split("\\.")[0];
+                    if (!categoryIndex.equals(currentCategoryIndex)) {
+                        //换大分类了
+                        secondCategoryName = line;
+                        secondCategory = exerciseService.createExerciseCategoryIfNotExist(secondCategoryName,
+                                parentCategory, requireUser());
+                    } else {
+                        thirdCategoryName = line;
+                        thirdCategory = exerciseService.createExerciseCategoryIfNotExist(thirdCategoryName,
+                                secondCategory, requireUser());
+                    }
+
+
                 }
             }
         }
