@@ -360,14 +360,14 @@ public class ExerciseServiceImpl implements ExerciseService {
                     minDifficulty = new BigDecimal(0.05f);
                     break;
                 case 15:
-                    maxDifficulty = new BigDecimal(0.5f);
+                    maxDifficulty = new BigDecimal(0.05f);
                     minDifficulty = new BigDecimal(0.0f);
                     break;
             }
             PageRequest pageRequest = PageRequest.of(0, 1);
             exercises = exerciseRepository
                     .nextStudentExercises(category, currentUser, minDifficulty, maxDifficulty, pageRequest);
-            if (exercises.isEmpty() && difficultyLevel > 15) {
+            if (exercises.isEmpty() && difficultyLevel >= 15) {
                 throw new BizException("抱歉，该分类没有更多的练习题了");
             }
             difficultyLevel++;
