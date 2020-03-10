@@ -1,5 +1,7 @@
 package org.fangzz.alcumus.alcumusservice.model;
 
+import org.fangzz.alcumus.alcumusservice.Constants;
+
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
@@ -71,6 +73,12 @@ public class UserCategory extends BaseEntity {
     }
 
     public void setScore(int score) {
+        if (score > Constants.MAX_USER_CATEGORY_SCORE) {
+            score = Constants.MAX_USER_CATEGORY_SCORE;
+        }
+        if (score < Constants.MIN_USER_CATEGORY_SCORE) {
+            score = Constants.MIN_USER_CATEGORY_SCORE;
+        }
         this.score = score;
     }
 

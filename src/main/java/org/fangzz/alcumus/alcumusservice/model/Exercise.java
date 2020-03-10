@@ -9,7 +9,19 @@ import java.util.Set;
 @Table(name = "t_exercises")
 public class Exercise extends DeletedAbleEntity {
     @ManyToOne
-    private ExerciseCategory category;
+    private ExerciseCategory category; //第1专题,不能为空
+
+    @ManyToOne
+    private ExerciseCategory secondCategory; //第2专题,可以为空
+
+    public ExerciseCategory getSecondCategory() {
+        return secondCategory;
+    }
+
+    public void setSecondCategory(ExerciseCategory secondCategory) {
+        this.secondCategory = secondCategory;
+    }
+
     private String name;
 
     @Column(name = "exercise_desc", length = 4096)

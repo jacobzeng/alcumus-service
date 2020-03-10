@@ -304,67 +304,69 @@ public class ExerciseServiceImpl implements ExerciseService {
         int difficultyLevel = userCategory.getDifficultyLevel();
         List<Exercise> exercises = Lists.newArrayList();
         while (exercises.isEmpty()) {
-            BigDecimal maxDifficulty = new BigDecimal(1.0);
-            BigDecimal minDifficulty = new BigDecimal(0.9);
+            BigDecimal maxDifficulty = new BigDecimal(new Double(1.0).toString());
+            BigDecimal minDifficulty = new BigDecimal(new Double(0.9).toString());
             switch (difficultyLevel) {
                 case 2:
-                    maxDifficulty = new BigDecimal(0.90f);
-                    minDifficulty = new BigDecimal(0.80f);
+                    maxDifficulty = new BigDecimal(new Double(0.9).toString());
+                    minDifficulty = new BigDecimal(new Double(0.8).toString());
                     break;
                 case 3:
-                    maxDifficulty = new BigDecimal(0.80f);
-                    minDifficulty = new BigDecimal(0.70f);
+                    maxDifficulty = new BigDecimal(new Double(0.8).toString());
+                    minDifficulty = new BigDecimal(new Double(0.7).toString());
                     break;
                 case 4:
-                    maxDifficulty = new BigDecimal(0.70f);
-                    minDifficulty = new BigDecimal(0.60f);
+                    maxDifficulty = new BigDecimal(new Double(0.7).toString());
+                    minDifficulty = new BigDecimal(new Double(0.6).toString());
                     break;
                 case 5:
-                    maxDifficulty = new BigDecimal(0.60f);
-                    minDifficulty = new BigDecimal(0.50f);
+                    maxDifficulty = new BigDecimal(new Double(0.6).toString());
+                    minDifficulty = new BigDecimal(new Double(0.5).toString());
                     break;
                 case 6:
-                    maxDifficulty = new BigDecimal(0.50f);
-                    minDifficulty = new BigDecimal(0.45f);
+                    maxDifficulty = new BigDecimal(new Double(0.5).toString());
+                    minDifficulty = new BigDecimal(new Double(0.45).toString());
                     break;
                 case 7:
-                    maxDifficulty = new BigDecimal(0.45f);
-                    minDifficulty = new BigDecimal(0.40f);
+                    maxDifficulty = new BigDecimal(new Double(0.45).toString());
+                    minDifficulty = new BigDecimal(new Double(0.40).toString());
                     break;
                 case 8:
-                    maxDifficulty = new BigDecimal(0.40f);
-                    minDifficulty = new BigDecimal(0.35f);
+                    maxDifficulty = new BigDecimal(new Double(0.40).toString());
+                    minDifficulty = new BigDecimal(new Double(0.35).toString());
                     break;
                 case 9:
-                    maxDifficulty = new BigDecimal(0.35f);
-                    minDifficulty = new BigDecimal(0.30f);
+                    maxDifficulty = new BigDecimal(new Double(0.35).toString());
+                    minDifficulty = new BigDecimal(new Double(0.30).toString());
                     break;
                 case 10:
-                    maxDifficulty = new BigDecimal(0.30f);
-                    minDifficulty = new BigDecimal(0.25f);
+                    maxDifficulty = new BigDecimal(new Double(0.30).toString());
+                    minDifficulty = new BigDecimal(new Double(0.25).toString());
                     break;
                 case 11:
-                    maxDifficulty = new BigDecimal(0.25f);
-                    minDifficulty = new BigDecimal(0.20f);
+                    maxDifficulty = new BigDecimal(new Double(0.25).toString());
+                    minDifficulty = new BigDecimal(new Double(0.20).toString());
                     break;
                 case 12:
-                    maxDifficulty = new BigDecimal(0.20f);
-                    minDifficulty = new BigDecimal(0.15f);
+                    maxDifficulty = new BigDecimal(new Double(0.20).toString());
+                    minDifficulty = new BigDecimal(new Double(0.15).toString());
                     break;
                 case 13:
-                    maxDifficulty = new BigDecimal(0.15f);
-                    minDifficulty = new BigDecimal(0.10f);
+                    maxDifficulty = new BigDecimal(new Double(0.15).toString());
+                    minDifficulty = new BigDecimal(new Double(0.10).toString());
                     break;
                 case 14:
-                    maxDifficulty = new BigDecimal(0.10f);
-                    minDifficulty = new BigDecimal(0.05f);
+                    maxDifficulty = new BigDecimal(new Double(0.10).toString());
+                    minDifficulty = new BigDecimal(new Double(0.05).toString());
                     break;
                 case 15:
-                    maxDifficulty = new BigDecimal(0.05f);
-                    minDifficulty = new BigDecimal(0.0f);
+                    maxDifficulty = new BigDecimal(new Double(0.05).toString());
+                    minDifficulty = new BigDecimal(new Double(0.0).toString());
                     break;
             }
-            PageRequest pageRequest = PageRequest.of(0, 1);
+            int maxCount = exerciseRepository
+                    .countNextStudentExercises(category, currentUser, minDifficulty, maxDifficulty);
+            PageRequest pageRequest = PageRequest.of(random.nextInt(maxCount), 1);
             exercises = exerciseRepository
                     .nextStudentExercises(category, currentUser, minDifficulty, maxDifficulty, pageRequest);
             if (exercises.isEmpty() && difficultyLevel >= 15) {
@@ -419,6 +421,8 @@ public class ExerciseServiceImpl implements ExerciseService {
     }
 
     private void calculateUserScore(Exercise exercise, int status, User student) {
+
+        //升级当前专题的难度抽屉
         UserCategory category = userCategoryRepository.findByUserAndCategory(student, exercise.getCategory());
         switch (status) {
             case UserExerciseLog.STATUS_RIGHT_FIRST_TIME:
@@ -437,49 +441,80 @@ public class ExerciseServiceImpl implements ExerciseService {
                 category.setCounterOfWrong(category.getCounterOfGiveup() + 1);
                 break;
         }
+        //算分
+        if (exercise.getSecondCategory() == null) {
+            /**
+             * （1）第一次做对一道难度系数为 a 的题目，积分增加=取整 round(10/a)
+             * （2）第一次做错第二次做对，积分增加为一次做对的 60%，=取整 round(6/a)
+             * （3）一错二错/放弃，积分减少为一次做对的 40%, =取整 round(4/a)
+             * （4）难度系数<=0.05 的题目，统一按照难度系数 0.05 处理。也就是说做对一道题最多加分 200 封顶
+             */
+            int score = 0;
+            BigDecimal difficulty = exercise.getDifficulty();
+            if (difficulty.floatValue() <= 0.05) {
+                difficulty = new BigDecimal(new Double(0.05).toString());
+            }
+            switch (status) {
+                case UserExerciseLog.STATUS_RIGHT_FIRST_TIME:
+                    score = new BigDecimal(10).divide(difficulty, 0, RoundingMode.HALF_EVEN).intValue();
+                    break;
+                case UserExerciseLog.STATUS_RIGHT_SECOND_TIME:
+                    score = Math.round(new BigDecimal(6).divide(difficulty, 0, RoundingMode.HALF_EVEN).intValue());
+                    break;
+                case UserExerciseLog.STATUS_GIVE_UP:
+                case UserExerciseLog.STATUS_WRONG:
+                    score = -Math.round(new BigDecimal(4).divide(difficulty, 0, RoundingMode.HALF_EVEN).intValue());
+                    break;
+            }
 
-        /**
-         * （1）第一次做对一道难度系数为 a 的题目，积分增加=取整 round(10/a)
-         * （2）第一次做错第二次做对，积分增加为一次做对的 60%，=取整 round(6/a)
-         * （3）一错二错/放弃，积分减少为一次做对的 40%, =取整 round(4/a)
-         * （4）难度系数<=0.05 的题目，统一按照难度系数 0.05 处理。也就是说做对一道题最多加分 200 封顶
-         */
-        int score = 0;
-        BigDecimal difficulty = exercise.getDifficulty();
-        if (difficulty.floatValue() <= 0.05) {
-            difficulty = new BigDecimal(0.05);
+            category.setScore(category.getScore() + score);
+            userCategoryRepository.save(category);
+        } else {
+            //第二种情况：当一道题同时给两个小专题 A，B 加分减分时，
+            // 第一小专题 A（即该道题目所 属于的小专题）加分减分量 = 第一种情况的 90%，
+            // 第二小专题 B 加分减分量 = 第一种情况 的 25%
+            ExerciseCategory secondCategory = exercise.getSecondCategory();
+            UserCategory secondUserCategory = userCategoryRepository.findByUserAndCategory(student, secondCategory);
+            if (null == secondUserCategory) {
+                secondUserCategory = new UserCategory();
+                secondUserCategory.setCategory(secondCategory);
+                secondUserCategory.setUser(student);
+                secondUserCategory.setScore(10); //初始化10分
+            }
+            
+            int score = 0;
+            int secondScore = 0;
+            BigDecimal difficulty = exercise.getDifficulty();
+            if (difficulty.floatValue() <= 0.05) {
+                difficulty = new BigDecimal(new Double(0.05).toString());
+            }
+            switch (status) {
+                case UserExerciseLog.STATUS_RIGHT_FIRST_TIME:
+                    score = new BigDecimal(9).divide(difficulty, 0, RoundingMode.HALF_EVEN).intValue();
+                    secondScore = new BigDecimal(new Double(2.5).toString())
+                            .divide(difficulty, 0, RoundingMode.HALF_EVEN).intValue();
+                    break;
+                case UserExerciseLog.STATUS_RIGHT_SECOND_TIME:
+                    score = Math.round(new BigDecimal(new Double(5.4).toString())
+                            .divide(difficulty, 0, RoundingMode.HALF_EVEN).intValue());
+                    secondScore = new BigDecimal(new Double(1.5).toString())
+                            .divide(difficulty, 0, RoundingMode.HALF_EVEN).intValue();
+                    break;
+                case UserExerciseLog.STATUS_GIVE_UP:
+                case UserExerciseLog.STATUS_WRONG:
+                    score = -Math.round(new BigDecimal(new Double(3.6).toString())
+                            .divide(difficulty, 0, RoundingMode.HALF_EVEN).intValue());
+                    secondScore = -Math
+                            .round(new BigDecimal(1).divide(difficulty, 0, RoundingMode.HALF_EVEN).intValue());
+                    break;
+            }
+
+            category.setScore(category.getScore() + score);
+            userCategoryRepository.save(category);
+
+            secondUserCategory.setScore(secondUserCategory.getScore() + secondScore);
+            userCategoryRepository.save(secondUserCategory);
         }
-        switch (status) {
-            case UserExerciseLog.STATUS_RIGHT_FIRST_TIME:
-                score = new BigDecimal(10).divide(difficulty, 0, RoundingMode.HALF_EVEN).intValue();
-                break;
-            case UserExerciseLog.STATUS_RIGHT_SECOND_TIME:
-                score = Math.round(new BigDecimal(6).divide(difficulty, 0, RoundingMode.HALF_EVEN).intValue());
-                break;
-            case UserExerciseLog.STATUS_GIVE_UP:
-            case UserExerciseLog.STATUS_WRONG:
-                score = -Math.round(new BigDecimal(4).divide(difficulty, 0, RoundingMode.HALF_EVEN).intValue());
-                break;
-        }
-
-        category.setScore(category.getScore() + score);
-        userCategoryRepository.save(category);
-//        List<ExerciseCategoryScoreDefinition> scoreDefinitions = exerciseCategoryScoreDefinitionRepository
-//                .findByExerciseAndStatus(exercise, status);
-
-//
-//        for (ExerciseCategoryScoreDefinition scoreDefinition : scoreDefinitions) {
-//            ExerciseCategory category = scoreDefinition.getCategory();
-//            UserScore existed = userScoreRepository.findByUserAndCategory(student, category);
-//            if (null == existed) {
-//                existed = new UserScore();
-//                existed.setCategory(category);
-//                existed.setUser(student);
-//                existed.setScore(0);
-//            }
-//            existed.setScore(existed.getScore() + scoreDefinition.getScore());
-//            userScoreRepository.save(existed);
-//        }
     }
 
     @Override
