@@ -81,7 +81,7 @@ public class ExerciseServiceImpl implements ExerciseService {
                 }
                 return criteriaBuilder.and(predicateList.toArray(new Predicate[]{}));
             }
-        }, Sort.by(Sort.Direction.ASC, "name"));
+        }, Sort.by(Sort.Direction.ASC, "createdAt"));
     }
 
     @Override
@@ -266,7 +266,7 @@ public class ExerciseServiceImpl implements ExerciseService {
                 }
                 return criteriaBuilder.and(predicateList.toArray(new Predicate[]{}));
             }
-        }, Sort.by(Sort.Direction.ASC, "name"));
+        }, Sort.by(Sort.Direction.ASC, "createdAt"));
     }
 
     @Override
