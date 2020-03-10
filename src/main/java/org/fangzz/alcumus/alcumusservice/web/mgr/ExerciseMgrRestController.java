@@ -124,8 +124,7 @@ public class ExerciseMgrRestController extends UserAwareController {
     }
 
     @PostMapping("/mgr/import/exercises")
-    public Map importExercises(@RequestParam("file") MultipartFile file,
-                               @RequestParam("parentCategory") String parentCategoryName) throws IOException {
+    public Map importExercises(@RequestParam("file") MultipartFile file) throws IOException {
         Map result = Maps.newHashMap();
         if (file.isEmpty()) {
             return result;
@@ -138,8 +137,10 @@ public class ExerciseMgrRestController extends UserAwareController {
             }
         };
 
-        ExerciseCategory parentCategory = exerciseService.findExerciseCategoryByName(parentCategoryName);
+
         List<String> lines = byteSource.asCharSource(Charsets.UTF_8).readLines();
+        String firstCategoryName = null;
+        ExerciseCategory firstCategory = null;
         String secondCategoryName = null;
         ExerciseCategory secondCategory = null;
         String thirdCategoryName = null;
@@ -151,14 +152,16 @@ public class ExerciseMgrRestController extends UserAwareController {
         String exerciseAnswerDesc = null;
         BigDecimal exerciseDifficulty = null;
         boolean exerciseEnd = true;
+        String exerciseSecondCategoryName = null;
 
-        for (String line : lines) {
+        for (int i = 0; i < lines.size(); i++) {
+            String line = lines.get(i);
             line = line.trim();
             if (Strings.isNullOrEmpty(line)) {
                 continue;
             }
             if (line.startsWith("标题") || line.startsWith("题目") || line.startsWith("答案") || line.startsWith("解析")
-                    || line.startsWith("难度")) {
+                    || line.startsWith("难度") || line.startsWith("第二专题：")) {
                 if (line.startsWith("标题：")) {
                     exerciseEnd = false;
                     exerciseName = line.split("标题：")[1];
@@ -170,6 +173,16 @@ public class ExerciseMgrRestController extends UserAwareController {
                     exerciseAnswerDesc = line.split("解析：")[1];
                 } else if (line.startsWith("难度：")) {
                     exerciseDifficulty = new BigDecimal(line.split("难度：")[1]);
+                } else if (line.startsWith("第二专题：")) {
+                    if (line.split("第二专题：").length == 2) {
+                        exerciseSecondCategoryName = line.split("第二专题：")[1];
+                    }
+                    ExerciseCategory exerciseSecondCategory = null;
+                    if (!Strings.isNullOrEmpty(exerciseSecondCategoryName)) {
+                        exerciseSecondCategory = exerciseService
+                                .createExerciseCategoryIfNotExist(exerciseSecondCategoryName,
+                                        secondCategory, requireUser());
+                    }
 
                     ExerciseCreateParameter exerciseCreateParameter = new ExerciseCreateParameter();
                     exerciseCreateParameter.setCategoryId(thirdCategory.getId());
@@ -179,6 +192,8 @@ public class ExerciseMgrRestController extends UserAwareController {
                     exerciseCreateParameter.setAnswer(exerciseAnswer);
                     exerciseCreateParameter.setAnswerDesc(exerciseAnswerDesc);
                     exerciseCreateParameter.setDifficulty(exerciseDifficulty);
+                    exerciseCreateParameter.setSecondCategoryId(
+                            exerciseSecondCategory == null ? null : exerciseSecondCategory.getId());
 
                     exerciseService.createExercise(exerciseCreateParameter, requireUser());
                     exerciseEnd = true;
@@ -187,7 +202,7 @@ public class ExerciseMgrRestController extends UserAwareController {
                     exerciseAnswer = null;
                     exerciseAnswerDesc = null;
                     exerciseDifficulty = null;
-
+                    exerciseSecondCategoryName = null;
                 }
 
             } else if (!exerciseEnd) {
@@ -198,28 +213,20 @@ public class ExerciseMgrRestController extends UserAwareController {
                 }
 
             } else {
-
-
-                if (secondCategoryName == null) {
-                    secondCategoryName = line;
+                //分类数据
+                String[] categoryNames = line.split("：");
+                if (categoryNames[0].equals("一级专题")) {
+                    firstCategoryName = categoryNames[1];
+                    firstCategory = exerciseService
+                            .createExerciseCategoryIfNotExist(firstCategoryName, null, requireUser());
+                } else if (categoryNames[0].equals("二级专题")) {
+                    secondCategoryName = categoryNames[1];
                     secondCategory = exerciseService.createExerciseCategoryIfNotExist(secondCategoryName,
-                            parentCategory, requireUser());
-
-                } else {
-                    String categoryIndex = line.split("\\.")[0];
-                    String currentCategoryIndex = secondCategoryName.split("\\.")[0];
-                    if (!categoryIndex.equals(currentCategoryIndex)) {
-                        //换大分类了
-                        secondCategoryName = line;
-                        secondCategory = exerciseService.createExerciseCategoryIfNotExist(secondCategoryName,
-                                parentCategory, requireUser());
-                    } else {
-                        thirdCategoryName = line;
-                        thirdCategory = exerciseService.createExerciseCategoryIfNotExist(thirdCategoryName,
-                                secondCategory, requireUser());
-                    }
-
-
+                            firstCategory, requireUser());
+                } else if (categoryNames[0].equals("三级专题")) {
+                    thirdCategoryName = categoryNames[1];
+                    thirdCategory = exerciseService.createExerciseCategoryIfNotExist(thirdCategoryName,
+                            secondCategory, requireUser());
                 }
             }
         }

@@ -151,11 +151,21 @@ public class ExerciseServiceImpl implements ExerciseService {
         if (null != parameter.getCategoryId()) {
             category = findExerciseCategoryById(parameter.getCategoryId(), requireUser);
             if (category.getLevel() != 2) {
-                throw new BizException("在最底层分类才能添加习题");
+                throw new BizException("在最底层专题才能添加习题");
             }
         }
+
+        ExerciseCategory secondCategory = null;
+        if (null != parameter.getSecondCategoryId()) {
+            secondCategory = findExerciseCategoryById(parameter.getSecondCategoryId(), requireUser);
+            if (secondCategory.getLevel() != 2) {
+                throw new BizException("在最底层专题才能添加习题");
+            }
+        }
+
         Exercise model = new Exercise();
         model.setCategory(category);
+        model.setSecondCategory(secondCategory);
         BeanUtils.copyProperties(parameter, model);
         if (null != parameter.getTags() && parameter.getTags().length > 0) {
             List<String> tagNames = Lists.newArrayList(parameter.getTags());

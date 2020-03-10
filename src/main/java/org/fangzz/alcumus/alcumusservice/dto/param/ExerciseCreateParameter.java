@@ -7,6 +7,16 @@ import java.math.BigDecimal;
 
 public class ExerciseCreateParameter {
     private Integer categoryId;
+
+    public Integer getSecondCategoryId() {
+        return secondCategoryId;
+    }
+
+    public void setSecondCategoryId(Integer secondCategoryId) {
+        this.secondCategoryId = secondCategoryId;
+    }
+
+    private Integer secondCategoryId;
     @NotEmpty(message = "习题名称不能为空")
     private String name;
     private String desc;
