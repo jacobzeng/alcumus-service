@@ -366,11 +366,12 @@ public class ExerciseServiceImpl implements ExerciseService {
             }
             int maxCount = exerciseRepository
                     .countNextStudentExercises(category, currentUser, minDifficulty, maxDifficulty);
-            PageRequest pageRequest = PageRequest.of(random.nextInt(maxCount), 1);
-            exercises = exerciseRepository
-                    .nextStudentExercises(category, currentUser, minDifficulty, maxDifficulty, pageRequest);
-            if (exercises.isEmpty() && difficultyLevel >= 15) {
+            if (maxCount == 0 && difficultyLevel >= 15) {
                 throw new BizException("抱歉，该分类没有更多的练习题了");
+            } else if (maxCount > 0) {
+                PageRequest pageRequest = PageRequest.of(random.nextInt(maxCount), 1);
+                exercises = exerciseRepository
+                        .nextStudentExercises(category, currentUser, minDifficulty, maxDifficulty, pageRequest);
             }
             difficultyLevel++;
         }
@@ -481,7 +482,7 @@ public class ExerciseServiceImpl implements ExerciseService {
                 secondUserCategory.setUser(student);
                 secondUserCategory.setScore(10); //初始化10分
             }
-            
+
             int score = 0;
             int secondScore = 0;
             BigDecimal difficulty = exercise.getDifficulty();
