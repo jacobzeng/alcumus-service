@@ -71,4 +71,6 @@ public interface ExerciseService {
 
     ExerciseCategory createExerciseCategoryIfNotExist(@NotEmpty String name, ExerciseCategory parent,
                                                       @NotNull User currentUser);
+
+    List<UserCategory> listUserCategories(UserCategoryQueryParameter parameter);
 }

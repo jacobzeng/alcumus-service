@@ -3,6 +3,7 @@ package org.fangzz.alcumus.alcumusservice.service.impl;
 import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.fangzz.alcumus.alcumusservice.Constants;
 import org.fangzz.alcumus.alcumusservice.dto.ExerciseAnswerResponse;
 import org.fangzz.alcumus.alcumusservice.dto.ExerciseGiveUpResponse;
 import org.fangzz.alcumus.alcumusservice.dto.param.*;
@@ -16,6 +17,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -521,11 +523,101 @@ public class ExerciseServiceImpl implements ExerciseService {
             }
 
             category.setScore(category.getScore() + score);
-            userCategoryRepository.save(category);
+            category = userCategoryRepository.save(category);
 
             secondUserCategory.setScore(secondUserCategory.getScore() + secondScore);
             userCategoryRepository.save(secondUserCategory);
         }
+
+        //计算专题等级
+        if (category.getScore() == 0) {
+            //当某次做题做错减分使小专题积分归 0 时，触发 系统进入下一个小专题做题
+            nextStudentExerciseCategory(student);
+        }
+
+        if (category.getScore() < 60 && category.getUserLevel() > 0) {
+            //降级到user level 0
+            category.setUserLevel(0);
+        } else if (category.getScore() < 100 && category.getUserLevel() > 1) {
+            //降级到user level 1
+            category.setUserLevel(1);
+        } else if (category.getScore() < 150 && category.getUserLevel() > 2) {
+            //降级到user level 2
+            category.setUserLevel(2);
+        }
+
+
+        if (category.getScore() >= 60 && category.getUserLevel() < 1) {
+            //通过
+            category.setUserLevel(1);
+            userActivityService
+                    .addActivity(student, String.format("恭喜您通过了专题%s", category.getCategory().getName()));
+
+            nextStudentExerciseCategory(student);
+        } else if (category.getScore() >= 100 && category.getUserLevel() < 2) {
+            //精通
+            category.setUserLevel(2);
+            userActivityService
+                    .addActivity(student, String.format("恭喜您在专题%s达到了精通", category.getCategory().getName()));
+
+            nextStudentExerciseCategory(student);
+        } else if (category.getScore() >= 150 && category.getUserLevel() < 3) {
+            //优秀
+            category.setUserLevel(3);
+            userActivityService
+                    .addActivity(student, String.format("恭喜您在专题%s达到了优秀", category.getCategory().getName()));
+
+            nextStudentExerciseCategory(student);
+        } else if (category.getScore() >= Constants.MAX_USER_CATEGORY_SCORE && category.getUserLevel() < 4) {
+            //满分
+            category.setUserLevel(4);
+            userActivityService
+                    .addActivity(student, String.format("恭喜您在专题%s达到了满分", category.getCategory().getName()));
+
+            nextStudentExerciseCategory(student);
+        }
+
+        category = userCategoryRepository.save(category);
+
+    }
+
+    /**
+     * 切换到下一个专题
+     *
+     * @param student
+     */
+    private void nextStudentExerciseCategory(User student) {
+        UserCategory currentUserCategory = getStudentCurrentCategory(student);
+        ExerciseCategory thirdCategory = currentUserCategory.getCategory();
+
+        ExerciseCategory secondCategory = thirdCategory.getParent();
+        //先找相同二级专题下其他未通过的三级专题
+        UserCategory newThirdUserCategory = userCategoryRepository
+                .findTop1ByUserAndCategoryParentAndScoreLessThanAndIdNot(student, secondCategory, 60,
+                        currentUserCategory.getId());
+
+        ExerciseCategory newThirdCategory = null;
+        if (null != newThirdUserCategory && !currentUserCategory.getId().equals(newThirdUserCategory.getId())) {
+            newThirdCategory = newThirdUserCategory.getCategory();
+        }
+
+        if (newThirdCategory == null) {
+            //找相同二级专题下其他初始化的的三级专题
+            Pageable pageable = PageRequest.of(0, 1);
+            List<ExerciseCategory> queryResult = exerciseCategoryRepository
+                    .findOtherThirdCategory(secondCategory, student, pageable);
+            if (!queryResult.isEmpty()) {
+                newThirdCategory = queryResult.get(0);
+            }
+        }
+
+        if (null == newThirdCategory) {
+            throw new BizException("该二级专题下已经没有更多三级专题了，请您另外选择");
+        }
+
+        StudentSetCurrentCategoryParameter studentSetCurrentCategoryParameter = new StudentSetCurrentCategoryParameter();
+        studentSetCurrentCategoryParameter.setCategoryId(newThirdCategory.getId());
+        setStudentCurrentCategory(studentSetCurrentCategoryParameter, student);
     }
 
     @Override
@@ -645,6 +737,20 @@ public class ExerciseServiceImpl implements ExerciseService {
             existed = createExerciseCategory(categoryCreateParameter, currentUser);
         }
         return existed;
+    }
+
+    @Override
+    public List<UserCategory> listUserCategories(UserCategoryQueryParameter parameter) {
+        return userCategoryRepository.findAll(new Specification() {
+            @Override
+            public Predicate toPredicate(Root root, CriteriaQuery query, CriteriaBuilder criteriaBuilder) {
+                List<Predicate> predicateList = Lists.newArrayList();
+                if (null != parameter.getUserId()) {
+                    predicateList.add(criteriaBuilder.equal(root.get("user").get("id"), parameter.getUserId()));
+                }
+                return criteriaBuilder.and(predicateList.toArray(new Predicate[]{}));
+            }
+        }, Sort.by(Sort.Direction.ASC, "createdAt"));
     }
 
     private Exercise findExerciseById(Integer exerciseId) {

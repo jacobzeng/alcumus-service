@@ -8,4 +8,7 @@ public interface UserCategoryRepository extends AbstractRepository<UserCategory>
     UserCategory findByUserAndCurrent(User student, boolean current);
 
     UserCategory findByUserAndCategory(User currentUser, ExerciseCategory category);
+
+    UserCategory findTop1ByUserAndCategoryParentAndScoreLessThanAndIdNot(User student, ExerciseCategory secondCategory,
+                                                                         int score, Integer id);
 }

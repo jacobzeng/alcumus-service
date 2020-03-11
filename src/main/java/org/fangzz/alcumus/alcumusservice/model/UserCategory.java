@@ -2,6 +2,7 @@ package org.fangzz.alcumus.alcumusservice.model;
 
 import org.fangzz.alcumus.alcumusservice.Constants;
 
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
@@ -22,6 +23,16 @@ public class UserCategory extends BaseEntity {
     private int counterOfGiveup = 0;
     private int score = 0;
     private int difficultyLevel = 1;
+    @Column(name = "user_category_level")
+    private int userLevel = 0; //用户级别
+
+    public int getUserLevel() {
+        return userLevel;
+    }
+
+    public void setUserLevel(int userLevel) {
+        this.userLevel = userLevel;
+    }
 
     public int getDifficultyLevel() {
         return difficultyLevel;
