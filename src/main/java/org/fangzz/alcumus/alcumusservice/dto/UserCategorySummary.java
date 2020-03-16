@@ -3,6 +3,16 @@ package org.fangzz.alcumus.alcumusservice.dto;
 import org.fangzz.alcumus.alcumusservice.model.UserCategory;
 
 public class UserCategorySummary extends BaseDto {
+    private ExerciseCategorySummary category;
+    private boolean current;
+    private int counterOfFirstRight = 0;
+    private int counterOfWrong = 0;
+    private int counterOfSecondRight = 0;
+    private int counterOfGiveup = 0;
+    private int score = 0;
+    private int difficultyLevel = 1;
+    private int userLevel = 0;
+
     public final static UserCategorySummary from(UserCategory model) {
         if (null == model) {
             return null;
@@ -13,16 +23,13 @@ public class UserCategorySummary extends BaseDto {
         return dto;
     }
 
-    private ExerciseCategorySummary category;
+    public int getUserLevel() {
+        return userLevel;
+    }
 
-    private boolean current;
-
-    private int counterOfFirstRight = 0;
-    private int counterOfWrong = 0;
-    private int counterOfSecondRight = 0;
-    private int counterOfGiveup = 0;
-    private int score = 0;
-    private int difficultyLevel = 1;
+    public void setUserLevel(int userLevel) {
+        this.userLevel = userLevel;
+    }
 
     public ExerciseCategorySummary getCategory() {
         return category;

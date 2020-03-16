@@ -6,6 +6,8 @@ import org.apache.commons.logging.LogFactory;
 import org.fangzz.alcumus.alcumusservice.Constants;
 import org.fangzz.alcumus.alcumusservice.dto.ExerciseAnswerResponse;
 import org.fangzz.alcumus.alcumusservice.dto.ExerciseGiveUpResponse;
+import org.fangzz.alcumus.alcumusservice.dto.StudentProfile;
+import org.fangzz.alcumus.alcumusservice.dto.UserCategorySummary;
 import org.fangzz.alcumus.alcumusservice.dto.param.*;
 import org.fangzz.alcumus.alcumusservice.exception.BizException;
 import org.fangzz.alcumus.alcumusservice.exception.ResourceNotFoundException;
@@ -554,31 +556,66 @@ public class ExerciseServiceImpl implements ExerciseService {
                     .addActivity(student, String.format("恭喜您通过了专题%s", category.getCategory().getName()));
 
             nextStudentExerciseCategory(student);
-        } else if (category.getScore() >= 100 && category.getUserLevel() < 2) {
+        }
+        if (category.getScore() >= 100 && category.getUserLevel() < 2) {
             //精通
             category.setUserLevel(2);
             userActivityService
-                    .addActivity(student, String.format("恭喜您在专题%s达到了精通", category.getCategory().getName()));
+                    .addActivity(student, String.format("恭喜您掌握了专题%s", category.getCategory().getName()));
 
             nextStudentExerciseCategory(student);
-        } else if (category.getScore() >= 150 && category.getUserLevel() < 3) {
+        }
+        if (category.getScore() >= 150 && category.getUserLevel() < 3) {
             //优秀
             category.setUserLevel(3);
             userActivityService
-                    .addActivity(student, String.format("恭喜您在专题%s达到了优秀", category.getCategory().getName()));
+                    .addActivity(student, String.format("恭喜您熟练掌握了专题%s", category.getCategory().getName()));
 
             nextStudentExerciseCategory(student);
-        } else if (category.getScore() >= Constants.MAX_USER_CATEGORY_SCORE && category.getUserLevel() < 4) {
+        }
+        if (category.getScore() >= Constants.MAX_USER_CATEGORY_SCORE && category.getUserLevel() < 4) {
             //满分
             category.setUserLevel(4);
             userActivityService
-                    .addActivity(student, String.format("恭喜您在专题%s达到了满分", category.getCategory().getName()));
+                    .addActivity(student, String.format("恭喜您精通了专题%s", category.getCategory().getName()));
 
             nextStudentExerciseCategory(student);
         }
 
         category = userCategoryRepository.save(category);
 
+        //计算父分类的分数
+        UserCategory parent = calculateParentUserCategoryScore(student, category);
+        calculateParentUserCategoryScore(student, parent);
+    }
+
+    private UserCategory calculateParentUserCategoryScore(User student, UserCategory childUserCategory) {
+        if (null == childUserCategory) {
+            return null;
+        }
+
+        ExerciseCategory parent = childUserCategory.getCategory().getParent();
+        if (null == parent) {
+            return null;
+        }
+        if (parent.getLevel() > 1) {
+            throw new BizException("只有父专题才能计算平均分数");
+        }
+
+
+        UserCategory existed = userCategoryRepository.findByUserAndCategory(student, parent);
+        if (null == existed) {
+            existed = new UserCategory();
+            existed.setUser(student);
+            existed.setCategory(parent);
+        }
+
+        Double score = userCategoryRepository.avgScore(parent, student);
+        existed.setScore(score.intValue());
+        existed.setDifficultyLevel(userCategoryRepository.avgDifficultyLevel(parent, student).intValue());
+        existed.setUserLevel(userCategoryRepository.avgUserLevel(parent, student).intValue());
+        existed = userCategoryRepository.save(existed);
+        return existed;
     }
 
     /**
@@ -751,6 +788,38 @@ public class ExerciseServiceImpl implements ExerciseService {
                 return criteriaBuilder.and(predicateList.toArray(new Predicate[]{}));
             }
         }, Sort.by(Sort.Direction.ASC, "createdAt"));
+    }
+
+    @Override
+    public StudentProfile getStudentProfile(@NotNull User student) {
+        StudentProfile result = new StudentProfile();
+        UserCategorySummary rootUserCategory = new UserCategorySummary();
+        result.setRootUserCategory(rootUserCategory);
+        rootUserCategory.setScore(userCategoryRepository.avgRootScore(student).intValue());
+        rootUserCategory.setDifficultyLevel(userCategoryRepository.avgRootDifficultyLevel(student).intValue());
+        rootUserCategory.setUserLevel(userCategoryRepository.avgRootUserLevel(student).intValue());
+
+        Pageable queryUserCategory = PageRequest.of(0, 6, Sort.by(Sort.Direction.DESC, "score"));
+        Page<UserCategory> queryUserCategoryResult = userCategoryRepository
+                .findByUserAndCategoryLevel(student, 2, queryUserCategory);
+
+        List<UserCategorySummary> categories = Lists.newArrayList();
+        result.setTopUserCategories(categories);
+        queryUserCategoryResult.getContent().forEach(userCategory -> {
+            categories.add(UserCategorySummary.from(userCategory));
+        });
+
+
+        rootUserCategory.setCounterOfFirstRight(
+                userExerciseLogRepository.countByUserAndStatus(student, UserExerciseLog.STATUS_RIGHT_FIRST_TIME));
+        rootUserCategory.setCounterOfSecondRight(
+                userExerciseLogRepository.countByUserAndStatus(student, UserExerciseLog.STATUS_RIGHT_SECOND_TIME));
+        rootUserCategory.setCounterOfGiveup(
+                userExerciseLogRepository.countByUserAndStatus(student, UserExerciseLog.STATUS_GIVE_UP));
+        rootUserCategory.setCounterOfWrong(
+                userExerciseLogRepository.countByUserAndStatus(student, UserExerciseLog.STATUS_WRONG));
+
+        return result;
     }
 
     private Exercise findExerciseById(Integer exerciseId) {

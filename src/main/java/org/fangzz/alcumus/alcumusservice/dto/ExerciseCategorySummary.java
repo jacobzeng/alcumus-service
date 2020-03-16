@@ -7,14 +7,6 @@ public class ExerciseCategorySummary extends BaseDto {
     private String code;
     private int level;
 
-    public int getLevel() {
-        return level;
-    }
-
-    public void setLevel(int level) {
-        this.level = level;
-    }
-
     public static ExerciseCategorySummary from(ExerciseCategory model) {
         if (null == model) {
             return null;
@@ -22,6 +14,14 @@ public class ExerciseCategorySummary extends BaseDto {
         ExerciseCategorySummary dto = new ExerciseCategorySummary();
         BaseDto.convert(model, dto);
         return dto;
+    }
+
+    public int getLevel() {
+        return level;
+    }
+
+    public void setLevel(int level) {
+        this.level = level;
     }
 
     public String getName() {

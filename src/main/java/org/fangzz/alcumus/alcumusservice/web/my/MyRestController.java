@@ -1,5 +1,6 @@
 package org.fangzz.alcumus.alcumusservice.web.my;
 
+import org.fangzz.alcumus.alcumusservice.dto.StudentProfile;
 import org.fangzz.alcumus.alcumusservice.dto.UserActivitySummary;
 import org.fangzz.alcumus.alcumusservice.dto.UserCategorySummary;
 import org.fangzz.alcumus.alcumusservice.dto.UserDetail;
@@ -60,5 +61,11 @@ public class MyRestController extends UserAwareController {
     public UserCategorySummary getMyCurrentUserCategory() {
         UserCategory queryResult = exerciseService.getStudentCurrentCategory(currentUser());
         return UserCategorySummary.from(queryResult);
+    }
+
+    @GetMapping("/my/student-profile")
+    @Transactional(readOnly = true)
+    public StudentProfile getMyStudentProfile() {
+        return exerciseService.getStudentProfile(currentUser());
     }
 }

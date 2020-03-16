@@ -17,6 +17,8 @@ public class UserExerciseLog extends BaseEntity {
     @ManyToOne
     private Exercise exercise;
     private int status = STATUS_CURRENT;
+    @ManyToOne
+    private ExerciseCategory category;
 
     public ExerciseCategory getCategory() {
         return category;
@@ -25,9 +27,6 @@ public class UserExerciseLog extends BaseEntity {
     public void setCategory(ExerciseCategory category) {
         this.category = category;
     }
-
-    @ManyToOne
-    private ExerciseCategory category;
 
     public User getUser() {
         return user;

@@ -32,6 +32,6 @@ public interface ExerciseRepository extends AbstractRepository<Exercise> {
 
     @Query(value = "select count(a.id) from Exercise a where a.category=:category and a.online=true and a.difficulty>:minDifficulty and a.difficulty<=:maxDifficulty and a.id not in(select b.exercise.id from UserExerciseLog b where b.user=:user)")
     int countNextStudentExercises(@Param("category") ExerciseCategory category, @Param("user") User user,
-                                        @Param("minDifficulty") BigDecimal minDifficulty,
-                                        @Param("maxDifficulty") BigDecimal maxDifficulty);
+                                  @Param("minDifficulty") BigDecimal minDifficulty,
+                                  @Param("maxDifficulty") BigDecimal maxDifficulty);
 }

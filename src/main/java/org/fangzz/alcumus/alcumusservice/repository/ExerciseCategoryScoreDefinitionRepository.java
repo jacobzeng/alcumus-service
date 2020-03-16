@@ -7,7 +7,8 @@ import org.fangzz.alcumus.alcumusservice.model.ExerciseCategoryScoreDefinition;
 import java.util.List;
 
 public interface ExerciseCategoryScoreDefinitionRepository extends AbstractRepository<ExerciseCategoryScoreDefinition> {
-    ExerciseCategoryScoreDefinition findByCategoryAndExerciseAndStatus(ExerciseCategory category, Exercise exercise, int status);
+    ExerciseCategoryScoreDefinition findByCategoryAndExerciseAndStatus(ExerciseCategory category, Exercise exercise,
+                                                                       int status);
 
     List<ExerciseCategoryScoreDefinition> findByExercise(Exercise exercise);
 

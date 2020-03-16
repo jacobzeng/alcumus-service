@@ -4,6 +4,7 @@ public class ExerciseAnswerResponse {
     private boolean right = false;
     private String answer;
     private String answerDesc;
+    private boolean submitAble = true;
 
     public String getAnswer() {
         return answer;
@@ -28,8 +29,6 @@ public class ExerciseAnswerResponse {
     public void setSubmitAble(boolean submitAble) {
         this.submitAble = submitAble;
     }
-
-    private boolean submitAble = true;
 
     public boolean isRight() {
         return right;

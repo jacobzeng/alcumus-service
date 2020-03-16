@@ -7,15 +7,6 @@ import java.math.BigDecimal;
 
 public class ExerciseCreateParameter {
     private Integer categoryId;
-
-    public Integer getSecondCategoryId() {
-        return secondCategoryId;
-    }
-
-    public void setSecondCategoryId(Integer secondCategoryId) {
-        this.secondCategoryId = secondCategoryId;
-    }
-
     private Integer secondCategoryId;
     @NotEmpty(message = "习题名称不能为空")
     private String name;
@@ -28,6 +19,14 @@ public class ExerciseCreateParameter {
     private String from; //练习题摘录自哪里
     private String[] tags;
     private boolean online = false;
+
+    public Integer getSecondCategoryId() {
+        return secondCategoryId;
+    }
+
+    public void setSecondCategoryId(Integer secondCategoryId) {
+        this.secondCategoryId = secondCategoryId;
+    }
 
     public boolean isOnline() {
         return online;

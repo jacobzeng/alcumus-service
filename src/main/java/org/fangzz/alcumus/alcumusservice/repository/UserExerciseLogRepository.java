@@ -9,4 +9,6 @@ public interface UserExerciseLogRepository extends AbstractRepository<UserExerci
     UserExerciseLog findByUserAndCategoryAndStatus(User currentUser, ExerciseCategory category, int statusCurrent);
 
     UserExerciseLog findByUserAndExercise(User student, Exercise exercise);
+
+    int countByUserAndStatus(User student, int status);
 }

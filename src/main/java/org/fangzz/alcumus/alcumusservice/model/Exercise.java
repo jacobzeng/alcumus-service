@@ -13,6 +13,20 @@ public class Exercise extends DeletedAbleEntity {
 
     @ManyToOne
     private ExerciseCategory secondCategory; //第2专题,可以为空
+    private String name;
+    @Column(name = "exercise_desc", length = 4096)
+    private String desc;
+    private BigDecimal difficulty = new BigDecimal(0); //0到1之间
+    private String answer; //答案
+    @Column(length = 4096)
+    private String answerDesc; //答案解析
+    @Column(name = "exercise_from")
+    private String from; //练习题摘录自哪里
+    @Column(name = "exercise_online")
+    private boolean online = false;
+    @ManyToMany(fetch = FetchType.LAZY)
+    private Set<ExerciseTag> tags = new HashSet<ExerciseTag>();
+    private String tagNames;
 
     public ExerciseCategory getSecondCategory() {
         return secondCategory;
@@ -21,26 +35,6 @@ public class Exercise extends DeletedAbleEntity {
     public void setSecondCategory(ExerciseCategory secondCategory) {
         this.secondCategory = secondCategory;
     }
-
-    private String name;
-
-    @Column(name = "exercise_desc", length = 4096)
-    private String desc;
-
-    private BigDecimal difficulty = new BigDecimal(0); //0到1之间
-
-    private String answer; //答案
-
-    @Column(length = 4096)
-    private String answerDesc; //答案解析
-
-    @Column(name = "exercise_from")
-    private String from; //练习题摘录自哪里
-    @Column(name = "exercise_online")
-    private boolean online = false;
-    @ManyToMany(fetch = FetchType.LAZY)
-    private Set<ExerciseTag> tags = new HashSet<ExerciseTag>();
-    private String tagNames;
 
     public boolean isOnline() {
         return online;

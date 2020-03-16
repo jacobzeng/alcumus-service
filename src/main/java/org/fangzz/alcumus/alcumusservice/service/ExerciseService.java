@@ -2,6 +2,7 @@ package org.fangzz.alcumus.alcumusservice.service;
 
 import org.fangzz.alcumus.alcumusservice.dto.ExerciseAnswerResponse;
 import org.fangzz.alcumus.alcumusservice.dto.ExerciseGiveUpResponse;
+import org.fangzz.alcumus.alcumusservice.dto.StudentProfile;
 import org.fangzz.alcumus.alcumusservice.dto.param.*;
 import org.fangzz.alcumus.alcumusservice.model.*;
 import org.springframework.data.domain.Page;
@@ -73,4 +74,6 @@ public interface ExerciseService {
                                                       @NotNull User currentUser);
 
     List<UserCategory> listUserCategories(UserCategoryQueryParameter parameter);
+
+    StudentProfile getStudentProfile(@NotNull User student);
 }
