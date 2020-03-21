@@ -1,6 +1,7 @@
 package org.fangzz.alcumus.alcumusservice.service.impl;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.fangzz.alcumus.alcumusservice.Constants;
@@ -15,6 +16,7 @@ import org.fangzz.alcumus.alcumusservice.model.*;
 import org.fangzz.alcumus.alcumusservice.repository.*;
 import org.fangzz.alcumus.alcumusservice.service.ExerciseService;
 import org.fangzz.alcumus.alcumusservice.service.UserActivityService;
+import org.fangzz.alcumus.alcumusservice.service.UserService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -35,9 +37,7 @@ import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 
 @Validated
 @Service
@@ -67,6 +67,12 @@ public class ExerciseServiceImpl implements ExerciseService {
 
     @Autowired
     private UserScoreRepository userScoreRepository;
+
+    @Autowired
+    private UserExerciseLogStatRepository userExerciseLogStatRepository;
+
+    @Autowired
+    private UserService userService;
 
     private Random random = new Random();
 
@@ -431,8 +437,32 @@ public class ExerciseServiceImpl implements ExerciseService {
 
         }
         userExerciseLogRepository.save(log);
+        increaseUserExerciseLogStat(log);
         calculateUserScore(exercise, log.getStatus(), student);
         return result;
+    }
+
+    private void increaseUserExerciseLogStat(UserExerciseLog log) {
+        Date date = log.getCreatedAt();
+        int year = date.getYear() + 1900;
+        int month = date.getMonth() + 1;
+        int day = date.getDate();
+        int dayInWeek = date.getDay();
+
+        UserExerciseLogStat existed = userExerciseLogStatRepository
+                .findByUserAndYearAndMonthAndDay(log.getUser(), year, month, day);
+        if (null == existed) {
+            existed = new UserExerciseLogStat();
+            existed.setCounter(0);
+            existed.setUser(log.getUser());
+            existed.setYear(year);
+            existed.setMonth(month);
+            existed.setDay(day);
+            existed.setDayInWeek(dayInWeek);
+        }
+
+        existed.setCounter(existed.getCounter() + 1);
+        userExerciseLogStatRepository.save(existed);
     }
 
     private void calculateUserScore(Exercise exercise, int status, User student) {
@@ -453,7 +483,7 @@ public class ExerciseServiceImpl implements ExerciseService {
                 category.setDifficultyLevel(category.getDifficultyLevel() - 1);
                 break;
             case UserExerciseLog.STATUS_GIVE_UP:
-                category.setCounterOfWrong(category.getCounterOfGiveup() + 1);
+                category.setCounterOfGiveup(category.getCounterOfGiveup() + 1);
                 break;
         }
         //算分
@@ -614,6 +644,11 @@ public class ExerciseServiceImpl implements ExerciseService {
         existed.setScore(score.intValue());
         existed.setDifficultyLevel(userCategoryRepository.avgDifficultyLevel(parent, student).intValue());
         existed.setUserLevel(userCategoryRepository.avgUserLevel(parent, student).intValue());
+        existed.setCounterOfWrong(userCategoryRepository.sumWrong(student, parent));
+        existed.setCounterOfSecondRight(userCategoryRepository.sumSecondRight(student, parent));
+        existed.setCounterOfFirstRight(userCategoryRepository.sumFirstRight(student, parent));
+        existed.setCounterOfGiveup(userCategoryRepository.sumGiveup(student, parent));
+
         existed = userCategoryRepository.save(existed);
         return existed;
     }
@@ -666,6 +701,7 @@ public class ExerciseServiceImpl implements ExerciseService {
         userExerciseLogRepository.save(log);
 
         calculateUserScore(exercise, log.getStatus(), student);
+        increaseUserExerciseLogStat(log);
 
         userActivityService.addActivity(student, String.format("放弃了题目: %s", exercise.getName()));
 
@@ -795,13 +831,15 @@ public class ExerciseServiceImpl implements ExerciseService {
         StudentProfile result = new StudentProfile();
         UserCategorySummary rootUserCategory = new UserCategorySummary();
         result.setRootUserCategory(rootUserCategory);
-        rootUserCategory.setScore(userCategoryRepository.avgRootScore(student).intValue());
-        rootUserCategory.setDifficultyLevel(userCategoryRepository.avgRootDifficultyLevel(student).intValue());
-        rootUserCategory.setUserLevel(userCategoryRepository.avgRootUserLevel(student).intValue());
+        UserCategory currentUserCategory = getStudentCurrentCategory(student);
+        ExerciseCategory firstCategory = currentUserCategory.getCategory().getParent().getParent();
+        UserCategory firstUserCategory = userCategoryRepository.findByUserAndCategory(student, firstCategory);
+
+        result.setRootUserCategory(UserCategorySummary.from(firstUserCategory));
 
         Pageable queryUserCategory = PageRequest.of(0, 6, Sort.by(Sort.Direction.DESC, "score"));
         Page<UserCategory> queryUserCategoryResult = userCategoryRepository
-                .findByUserAndCategoryLevel(student, 2, queryUserCategory);
+                .findByUserAndCategoryLevel(student, 1, queryUserCategory);
 
         List<UserCategorySummary> categories = Lists.newArrayList();
         result.setTopUserCategories(categories);
@@ -810,16 +848,44 @@ public class ExerciseServiceImpl implements ExerciseService {
         });
 
 
-        rootUserCategory.setCounterOfFirstRight(
-                userExerciseLogRepository.countByUserAndStatus(student, UserExerciseLog.STATUS_RIGHT_FIRST_TIME));
-        rootUserCategory.setCounterOfSecondRight(
-                userExerciseLogRepository.countByUserAndStatus(student, UserExerciseLog.STATUS_RIGHT_SECOND_TIME));
-        rootUserCategory.setCounterOfGiveup(
-                userExerciseLogRepository.countByUserAndStatus(student, UserExerciseLog.STATUS_GIVE_UP));
-        rootUserCategory.setCounterOfWrong(
-                userExerciseLogRepository.countByUserAndStatus(student, UserExerciseLog.STATUS_WRONG));
+        Map<Integer, Integer> thirdCategoryStats = Maps.newHashMap();
+        result.setThirdCategoryStats(thirdCategoryStats);
+        thirdCategoryStats.put(0, userCategoryRepository.countByUserAndCategoryLevelAndUserLevel(student, 2, 0));
+        thirdCategoryStats.put(1, userCategoryRepository.countByUserAndCategoryLevelAndUserLevel(student, 2, 1));
+        thirdCategoryStats.put(2, userCategoryRepository.countByUserAndCategoryLevelAndUserLevel(student, 2, 2));
+        thirdCategoryStats.put(3, userCategoryRepository
+                .countByUserAndCategoryLevelAndUserLevel(student, 2, 3) + userCategoryRepository
+                .countByUserAndCategoryLevelAndUserLevel(student, 2, 4));
+
+        int year = Calendar.getInstance().get(Calendar.YEAR);
+        Map<String, Integer> logStatMap = Maps.newHashMap();
+        result.setExerciseLogStats(logStatMap);
+        List<UserExerciseLogStat> logStats = userExerciseLogStatRepository.findByUserAndYear(student, year);
+        for (UserExerciseLogStat logStat : logStats) {
+            logStatMap.put(logStat.getYear() + "_" + logStat.getMonth() + "_" + logStat.getDay(), logStat.getCounter());
+        }
 
         return result;
+    }
+
+    @Override
+    public void calculateUserExerciseLogStats(@NotNull Integer id, @NotNull User currentUser) {
+        User user = userService.findById(id);
+        log.info(String.format("calculateUserExerciseLogStats for %s(%d)", user.getUsername(), user.getId()));
+        userExerciseLogStatRepository.deleteByUser(user);
+
+        int currentPage = 0;
+        Pageable pageRequest = PageRequest.of(currentPage, 100);
+        Page<UserExerciseLog> logs = userExerciseLogRepository.findByUser(user, pageRequest);
+        while (!logs.isEmpty()) {
+            for (UserExerciseLog log : logs) {
+                increaseUserExerciseLogStat(log);
+            }
+
+            currentPage++;
+            pageRequest = PageRequest.of(currentPage, 100);
+            logs = userExerciseLogRepository.findByUser(user, pageRequest);
+        }
     }
 
     private Exercise findExerciseById(Integer exerciseId) {

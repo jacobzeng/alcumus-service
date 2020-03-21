@@ -15,4 +15,6 @@ public interface UserService {
     User createUser(@NotNull @Valid UserCreateParameter parameter);
 
     User createStudentAccount(@NotNull @Valid StudentRegisterParameter parameter);
+
+    User findById(@NotNull Integer id);
 }

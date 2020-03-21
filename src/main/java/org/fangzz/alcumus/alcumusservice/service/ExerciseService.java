@@ -76,4 +76,6 @@ public interface ExerciseService {
     List<UserCategory> listUserCategories(UserCategoryQueryParameter parameter);
 
     StudentProfile getStudentProfile(@NotNull User student);
+
+    void calculateUserExerciseLogStats(@NotNull Integer id, @NotNull User requireUser);
 }

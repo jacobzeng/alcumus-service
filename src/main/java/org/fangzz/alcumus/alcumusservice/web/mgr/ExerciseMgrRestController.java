@@ -233,4 +233,9 @@ public class ExerciseMgrRestController extends UserAwareController {
 
         return result;
     }
+
+    @PostMapping("/mgr/users/{id}/calculate-user-exercise-log-stats")
+    public void calculateUserExerciseLogStats(@PathVariable Integer id) {
+        exerciseService.calculateUserExerciseLogStats(id, requireUser());
+    }
 }

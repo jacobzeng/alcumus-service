@@ -61,4 +61,9 @@ public class UserServiceImpl implements UserService {
         userCreateParameter.setRoles(new UserRole[]{UserRole.ROLE_USER, UserRole.ROLE_STUDENT});
         return createUser(userCreateParameter);
     }
+
+    @Override
+    public User findById(@NotNull Integer id) {
+        return userRepository.findById(id).orElse(null);
+    }
 }

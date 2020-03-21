@@ -35,4 +35,18 @@ public interface UserCategoryRepository extends AbstractRepository<UserCategory>
     Double avgRootUserLevel(@Param("user") User user);
 
     Page<UserCategory> findByUserAndCategoryLevel(User student, int categoryLevel, Pageable queryUserCategory);
+
+    @Query(value = "SELECT sum(a.counterOfWrong) FROM UserCategory a where a.category.parent=:parent and a.user=:user")
+    int sumWrong(@Param("user") User student, @Param("parent") ExerciseCategory parent);
+
+    @Query(value = "SELECT sum(a.counterOfSecondRight) FROM UserCategory a where a.category.parent=:parent and a.user=:user")
+    int sumSecondRight(@Param("user") User student, @Param("parent") ExerciseCategory parent);
+
+    @Query(value = "SELECT sum(a.counterOfFirstRight) FROM UserCategory a where a.category.parent=:parent and a.user=:user")
+    int sumFirstRight(@Param("user") User student, @Param("parent") ExerciseCategory parent);
+
+    @Query(value = "SELECT sum(a.counterOfGiveup) FROM UserCategory a where a.category.parent=:parent and a.user=:user")
+    int sumGiveup(@Param("user") User student, @Param("parent") ExerciseCategory parent);
+
+    int countByUserAndCategoryLevelAndUserLevel(User student, int categoryLevel, int userLevel);
 }
