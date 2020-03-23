@@ -14,4 +14,6 @@ public interface ExerciseCategoryRepository extends AbstractRepository<ExerciseC
     @Query(value = "select a from ExerciseCategory a where a.parent=:secondCategory and a.id not in(select b.category.id from UserCategory b where b.user=:student)")
     List<ExerciseCategory> findOtherThirdCategory(@Param("secondCategory") ExerciseCategory secondCategory,
                                                   @Param("student") User student, Pageable pageable);
+
+    List<ExerciseCategory> findByParent(ExerciseCategory firstCategory);
 }

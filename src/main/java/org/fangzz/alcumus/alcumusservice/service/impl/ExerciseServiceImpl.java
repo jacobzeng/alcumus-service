@@ -2,13 +2,11 @@ package org.fangzz.alcumus.alcumusservice.service.impl;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.fangzz.alcumus.alcumusservice.Constants;
-import org.fangzz.alcumus.alcumusservice.dto.ExerciseAnswerResponse;
-import org.fangzz.alcumus.alcumusservice.dto.ExerciseGiveUpResponse;
-import org.fangzz.alcumus.alcumusservice.dto.StudentProfile;
-import org.fangzz.alcumus.alcumusservice.dto.UserCategorySummary;
+import org.fangzz.alcumus.alcumusservice.dto.*;
 import org.fangzz.alcumus.alcumusservice.dto.param.*;
 import org.fangzz.alcumus.alcumusservice.exception.BizException;
 import org.fangzz.alcumus.alcumusservice.exception.ResourceNotFoundException;
@@ -699,9 +697,10 @@ public class ExerciseServiceImpl implements ExerciseService {
         UserExerciseLog log = userExerciseLogRepository.findByUserAndExercise(student, exercise);
         log.setStatus(UserExerciseLog.STATUS_GIVE_UP);
         userExerciseLogRepository.save(log);
+        increaseUserExerciseLogStat(log);
 
         calculateUserScore(exercise, log.getStatus(), student);
-        increaseUserExerciseLogStat(log);
+
 
         userActivityService.addActivity(student, String.format("放弃了题目: %s", exercise.getName()));
 
@@ -837,20 +836,41 @@ public class ExerciseServiceImpl implements ExerciseService {
 
         result.setRootUserCategory(UserCategorySummary.from(firstUserCategory));
 
-        Pageable queryUserCategory = PageRequest.of(0, 6, Sort.by(Sort.Direction.DESC, "score"));
+        Pageable queryUserCategory = PageRequest.of(0, 99, Sort.by(Sort.Direction.DESC, "score"));
         Page<UserCategory> queryUserCategoryResult = userCategoryRepository
                 .findByUserAndCategoryLevel(student, 1, queryUserCategory);
 
+        Set<Integer> hasScoreCategories = Sets.newHashSet();
         List<UserCategorySummary> categories = Lists.newArrayList();
         result.setTopUserCategories(categories);
         queryUserCategoryResult.getContent().forEach(userCategory -> {
+            hasScoreCategories.add(userCategory.getCategory().getId());
             categories.add(UserCategorySummary.from(userCategory));
         });
+
+        List<ExerciseCategory> secondCategories = exerciseCategoryRepository.findByParent(firstCategory);
+        int counterOfNoScoreCategories = 0;
+        for (ExerciseCategory category : secondCategories) {
+            if (!hasScoreCategories.contains(category.getId())) {
+                UserCategorySummary summary = new UserCategorySummary();
+                summary.setUserLevel(0);
+                summary.setDifficultyLevel(1);
+                summary.setScore(10);
+                summary.setCounterOfFirstRight(0);
+                summary.setCounterOfGiveup(0);
+                summary.setCounterOfSecondRight(0);
+                summary.setCounterOfWrong(0);
+                summary.setCategory(ExerciseCategorySummary.from(category));
+                categories.add(summary);
+                counterOfNoScoreCategories++;
+            }
+        }
 
 
         Map<Integer, Integer> thirdCategoryStats = Maps.newHashMap();
         result.setThirdCategoryStats(thirdCategoryStats);
-        thirdCategoryStats.put(0, userCategoryRepository.countByUserAndCategoryLevelAndUserLevel(student, 2, 0));
+        thirdCategoryStats.put(0, counterOfNoScoreCategories + userCategoryRepository
+                .countByUserAndCategoryLevelAndUserLevel(student, 2, 0));
         thirdCategoryStats.put(1, userCategoryRepository.countByUserAndCategoryLevelAndUserLevel(student, 2, 1));
         thirdCategoryStats.put(2, userCategoryRepository.countByUserAndCategoryLevelAndUserLevel(student, 2, 2));
         thirdCategoryStats.put(3, userCategoryRepository
