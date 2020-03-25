@@ -7,6 +7,7 @@ public class StudentProfile {
     private UserCategorySummary rootUserCategory;
     private List<UserCategorySummary> topUserCategories;
     private Map<String, Integer> exerciseLogStats;
+    private Map<Integer, Integer> thirdCategoryStats;
 
     public Map<String, Integer> getExerciseLogStats() {
         return exerciseLogStats;
@@ -23,8 +24,6 @@ public class StudentProfile {
     public void setThirdCategoryStats(Map<Integer, Integer> thirdCategoryStats) {
         this.thirdCategoryStats = thirdCategoryStats;
     }
-
-    private Map<Integer, Integer> thirdCategoryStats;
 
     public UserCategorySummary getRootUserCategory() {
         return rootUserCategory;

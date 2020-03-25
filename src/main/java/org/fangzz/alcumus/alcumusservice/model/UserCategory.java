@@ -14,9 +14,8 @@ public class UserCategory extends BaseEntity {
     private User user;
     @ManyToOne
     private ExerciseCategory category;
-
+    private String categoryCode;
     private boolean current;
-
     private int counterOfFirstRight = 0;
     private int counterOfWrong = 0;
     private int counterOfSecondRight = 0;
@@ -25,6 +24,14 @@ public class UserCategory extends BaseEntity {
     private int difficultyLevel = 1;
     @Column(name = "user_category_level")
     private int userLevel = 0; //用户级别
+
+    public String getCategoryCode() {
+        return categoryCode;
+    }
+
+    public void setCategoryCode(String categoryCode) {
+        this.categoryCode = categoryCode;
+    }
 
     public int getUserLevel() {
         return userLevel;

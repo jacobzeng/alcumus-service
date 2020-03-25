@@ -36,6 +36,9 @@ import javax.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.*;
+import java.util.stream.Collectors;
+
+import static org.fangzz.alcumus.alcumusservice.Constants.START_CATEGORY_SCORE;
 
 @Validated
 @Service
@@ -293,10 +296,7 @@ public class ExerciseServiceImpl implements ExerciseService {
         }
         UserCategory existed = userCategoryRepository.findByUserAndCategory(currentUser, category);
         if (null == existed) {
-            existed = new UserCategory();
-            existed.setCategory(category);
-            existed.setUser(currentUser);
-            existed.setScore(10); //初始化10分
+            existed = initUserCategory(currentUser, category);
         }
         existed.setCurrent(true);
         existed = userCategoryRepository.save(existed);
@@ -401,6 +401,7 @@ public class ExerciseServiceImpl implements ExerciseService {
         newLog.setExercise(result);
         newLog.setUser(currentUser);
         newLog.setStatus(UserExerciseLog.STATUS_CURRENT);
+        newLog.setCategoryCode(category.getCode());
         userExerciseLogRepository.save(newLog);
 
         return result;
@@ -519,10 +520,7 @@ public class ExerciseServiceImpl implements ExerciseService {
             ExerciseCategory secondCategory = exercise.getSecondCategory();
             UserCategory secondUserCategory = userCategoryRepository.findByUserAndCategory(student, secondCategory);
             if (null == secondUserCategory) {
-                secondUserCategory = new UserCategory();
-                secondUserCategory.setCategory(secondCategory);
-                secondUserCategory.setUser(student);
-                secondUserCategory.setScore(10); //初始化10分
+                secondUserCategory = initUserCategory(student, secondCategory);
             }
 
             int score = 0;
@@ -633,9 +631,7 @@ public class ExerciseServiceImpl implements ExerciseService {
 
         UserCategory existed = userCategoryRepository.findByUserAndCategory(student, parent);
         if (null == existed) {
-            existed = new UserCategory();
-            existed.setUser(student);
-            existed.setCategory(parent);
+            existed = initUserCategory(student, parent);
         }
 
         Double score = userCategoryRepository.avgScore(parent, student);
@@ -906,6 +902,175 @@ public class ExerciseServiceImpl implements ExerciseService {
             pageRequest = PageRequest.of(currentPage, 100);
             logs = userExerciseLogRepository.findByUser(user, pageRequest);
         }
+    }
+
+    @Override
+    public StudentReport1 getMyStudentReport1(@NotNull Integer categoryId, @NotNull User student) {
+        ExerciseCategory category = findExerciseCategoryById(categoryId);
+        if (category.getLevel() != 2) {
+            throw new BizException("该专题不是3级专题");
+        }
+
+        StudentReport1 result = new StudentReport1();
+        UserCategory userCategory = userCategoryRepository.findByUserAndCategory(student, category);
+        if (userCategory == null) {
+            userCategory = initUserCategory(student, category);
+        }
+        result.setThirdUserCategory(UserCategorySummary.from(userCategory));
+
+        UserCategory secondUserCategory = userCategoryRepository.findByUserAndCategory(student, category.getParent());
+        if (null == secondUserCategory) {
+            secondUserCategory = initUserCategory(student, category.getParent());
+        }
+        result.setSecondUserCategory(UserCategorySummary.from(secondUserCategory));
+
+        List<UserCategory> thirdUserCategories = userCategoryRepository
+                .findByUserAndCategoryParent(student, category.getParent(), Sort.by(Sort.Direction.DESC, "score"));
+        List<ExerciseCategory> thirdCategories = exerciseCategoryRepository.findByParent(category.getParent());
+        Set<Integer> hasScoreCategories = Sets.newHashSet();
+        List<UserCategorySummary> thirdCategorySummaries = Lists.newArrayList();
+        result.setThirdUserCategories(thirdCategorySummaries);
+        for (UserCategory item : thirdUserCategories) {
+            thirdCategorySummaries.add(UserCategorySummary.from(item));
+            hasScoreCategories.add(item.getCategory().getId());
+        }
+
+        for (ExerciseCategory item : thirdCategories) {
+            if (!hasScoreCategories.contains(item.getId())) {
+                thirdCategorySummaries.add(UserCategorySummary.from(initUserCategory(student, item)));
+            }
+        }
+
+        List<UserExerciseLog> exerciseLogs = userExerciseLogRepository
+                .findByUserAndCategoryAndStatusIn(student, category,
+                        new int[]{UserExerciseLog.STATUS_RIGHT_FIRST_TIME, UserExerciseLog.STATUS_RIGHT_SECOND_TIME, UserExerciseLog.STATUS_GIVE_UP,
+                                UserExerciseLog.STATUS_WRONG}, Sort.by(Sort.Direction.DESC, "modifiedAt"));
+
+        result.setExerciseLogs(exerciseLogs.stream().map(UserExerciseLogSummary::from).collect(Collectors.toList()));
+
+
+        return result;
+    }
+
+    @Override
+    public StudentReport2 getMyStudentReport2(@NotNull Integer categoryId, @NotNull User student) {
+        ExerciseCategory category = findExerciseCategoryById(categoryId);
+        if (category.getLevel() != 1) {
+            throw new BizException("该专题不是2级专题");
+        }
+
+        StudentReport2 result = new StudentReport2();
+        UserCategory userCategory = userCategoryRepository.findByUserAndCategory(student, category);
+        if (userCategory == null) {
+            userCategory = initUserCategory(student, category);
+        }
+        result.setSecondUserCategory(UserCategorySummary.from(userCategory));
+
+        List<UserCategory> thirdUserCategories = userCategoryRepository
+                .findByUserAndCategoryParent(student, category, Sort.by(Sort.Direction.DESC, "score"));
+        List<ExerciseCategory> thirdCategories = exerciseCategoryRepository.findByParent(category);
+        Set<Integer> hasScoreCategories = Sets.newHashSet();
+        List<UserCategorySummary> thirdCategorySummaries = Lists.newArrayList();
+        result.setThirdUserCategories(thirdCategorySummaries);
+        for (UserCategory item : thirdUserCategories) {
+            thirdCategorySummaries.add(UserCategorySummary.from(item));
+            hasScoreCategories.add(item.getCategory().getId());
+        }
+
+        for (ExerciseCategory item : thirdCategories) {
+            if (!hasScoreCategories.contains(item.getId())) {
+                thirdCategorySummaries.add(UserCategorySummary.from(initUserCategory(student, item)));
+            }
+        }
+
+        List<UserExerciseLog> exerciseLogs = userExerciseLogRepository
+                .findByUserAndCategoryCodeLikeAndStatusIn(student, category.getCode() + "%",
+                        new int[]{UserExerciseLog.STATUS_RIGHT_FIRST_TIME, UserExerciseLog.STATUS_RIGHT_SECOND_TIME, UserExerciseLog.STATUS_GIVE_UP,
+                                UserExerciseLog.STATUS_WRONG}, Sort.by(Sort.Direction.DESC, "modifiedAt"));
+        result.setExerciseLogs(exerciseLogs.stream().map(UserExerciseLogSummary::from).collect(Collectors.toList()));
+        return result;
+    }
+
+    @Override
+    public StudentReport3 getMyStudentReport3(@NotNull Integer categoryId, @NotNull User student) {
+        ExerciseCategory category = findExerciseCategoryById(categoryId);
+        if (category.getLevel() != 0) {
+            throw new BizException("该专题不是1级专题");
+        }
+        StudentReport3 result = new StudentReport3();
+
+        UserCategory userCategory = userCategoryRepository.findByUserAndCategory(student, category);
+        if (userCategory == null) {
+            userCategory = initUserCategory(student, category);
+        }
+        result.setFirstUserCategory(UserCategorySummary.from(userCategory));
+
+        List<UserCategory> secondUserCategories = userCategoryRepository
+                .findByUserAndCategoryParent(student, category, Sort.by(Sort.Direction.DESC, "score"));
+        List<ExerciseCategory> secondCategories = exerciseCategoryRepository.findByParent(category);
+        Set<Integer> hasScoreCategories = Sets.newHashSet();
+        List<UserCategorySummary> secondCategorySummaries = Lists.newArrayList();
+        result.setSecondUserCategories(secondCategorySummaries);
+        for (UserCategory item : secondUserCategories) {
+            secondCategorySummaries.add(UserCategorySummary.from(item));
+            hasScoreCategories.add(item.getCategory().getId());
+        }
+
+        for (ExerciseCategory item : secondCategories) {
+            if (!hasScoreCategories.contains(item.getId())) {
+                secondCategorySummaries.add(UserCategorySummary.from(initUserCategory(student, item)));
+            }
+        }
+
+        Map<String, Integer> thirdCategoryStats = Maps.newHashMap();
+        result.setThirdCategoryStats(thirdCategoryStats);
+        thirdCategoryStats.put("未通过", userCategoryRepository
+                .countByUserAndCategoryCodeLikeAndCategoryLevelAndUserLevel(student, category.getCode() + "%", 2, 0));
+        thirdCategoryStats.put("通过",
+                userCategoryRepository
+                        .countByUserAndCategoryCodeLikeAndCategoryLevelAndUserLevel(student, category.getCode() + "%",
+                                2, 1));
+        thirdCategoryStats.put("掌握",
+                userCategoryRepository
+                        .countByUserAndCategoryCodeLikeAndCategoryLevelAndUserLevel(student, category.getCode() + "%",
+                                2, 2));
+        thirdCategoryStats.put("熟练掌握", userCategoryRepository
+                .countByUserAndCategoryCodeLikeAndCategoryLevelAndUserLevel(student, category.getCode() + "%", 2,
+                        3) + userCategoryRepository
+                .countByUserAndCategoryCodeLikeAndCategoryLevelAndUserLevel(student, category.getCode() + "%", 2, 4));
+
+        Map<String, Integer> exerciseLogStats = Maps.newConcurrentMap();
+        result.setExerciseLogStats(exerciseLogStats);
+        exerciseLogStats.put("一对",
+                userExerciseLogRepository.countByUserAndCategoryCodeLikeAndStatus(student, category.getCode() + "%",
+                        UserExerciseLog.STATUS_RIGHT_FIRST_TIME));
+        exerciseLogStats.put("二对",
+                userExerciseLogRepository.countByUserAndCategoryCodeLikeAndStatus(student, category.getCode() + "%",
+                        UserExerciseLog.STATUS_RIGHT_SECOND_TIME));
+        exerciseLogStats.put("错误",
+                userExerciseLogRepository.countByUserAndCategoryCodeLikeAndStatus(student, category.getCode() + "%",
+                        UserExerciseLog.STATUS_WRONG));
+        exerciseLogStats.put("放弃",
+                userExerciseLogRepository.countByUserAndCategoryCodeLikeAndStatus(student, category.getCode() + "%",
+                        UserExerciseLog.STATUS_GIVE_UP));
+
+        return result;
+    }
+
+    private UserCategory initUserCategory(User student, ExerciseCategory category) {
+        UserCategory userCategory = new UserCategory();
+        userCategory.setUser(student);
+        userCategory.setCategory(category);
+        userCategory.setCategoryCode(category.getCode());
+        userCategory.setScore(START_CATEGORY_SCORE);
+        userCategory.setCounterOfGiveup(0);
+        userCategory.setCounterOfFirstRight(0);
+        userCategory.setCounterOfSecondRight(0);
+        userCategory.setCounterOfWrong(0);
+        userCategory.setUserLevel(0);
+        userCategory.setDifficultyLevel(1);
+        return userCategoryRepository.save(userCategory);
+
     }
 
     private Exercise findExerciseById(Integer exerciseId) {

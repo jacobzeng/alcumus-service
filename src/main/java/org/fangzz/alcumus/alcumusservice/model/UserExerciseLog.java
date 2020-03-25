@@ -1,6 +1,7 @@
 package org.fangzz.alcumus.alcumusservice.model;
 
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 
@@ -14,11 +15,21 @@ public class UserExerciseLog extends BaseEntity {
     public final static int STATUS_WRONG = 5;
     @ManyToOne
     private User user;
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER)
     private Exercise exercise;
     private int status = STATUS_CURRENT;
     @ManyToOne
     private ExerciseCategory category;
+
+    private String categoryCode;
+
+    public String getCategoryCode() {
+        return categoryCode;
+    }
+
+    public void setCategoryCode(String categoryCode) {
+        this.categoryCode = categoryCode;
+    }
 
     public ExerciseCategory getCategory() {
         return category;

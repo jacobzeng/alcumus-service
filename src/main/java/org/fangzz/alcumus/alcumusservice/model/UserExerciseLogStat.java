@@ -6,13 +6,14 @@ import javax.persistence.Table;
 
 @Entity
 @Table(name = "t_user_exercise_log_stats")
-public class UserExerciseLogStat extends BaseEntity{
+public class UserExerciseLogStat extends BaseEntity {
     @ManyToOne
     private User user;
     private int year = 0;
     private int month = 0;
     private int day = 0;
     private int dayInWeek = 0;
+    private int counter = 0;
 
     public User getUser() {
         return user;
@@ -61,6 +62,4 @@ public class UserExerciseLogStat extends BaseEntity{
     public void setCounter(int counter) {
         this.counter = counter;
     }
-
-    private int counter = 0;
 }

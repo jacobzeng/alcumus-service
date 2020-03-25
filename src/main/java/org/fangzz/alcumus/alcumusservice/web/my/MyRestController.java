@@ -1,9 +1,6 @@
 package org.fangzz.alcumus.alcumusservice.web.my;
 
-import org.fangzz.alcumus.alcumusservice.dto.StudentProfile;
-import org.fangzz.alcumus.alcumusservice.dto.UserActivitySummary;
-import org.fangzz.alcumus.alcumusservice.dto.UserCategorySummary;
-import org.fangzz.alcumus.alcumusservice.dto.UserDetail;
+import org.fangzz.alcumus.alcumusservice.dto.*;
 import org.fangzz.alcumus.alcumusservice.dto.param.UserActivityQueryParameter;
 import org.fangzz.alcumus.alcumusservice.model.User;
 import org.fangzz.alcumus.alcumusservice.model.UserActivity;
@@ -17,6 +14,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -67,5 +65,23 @@ public class MyRestController extends UserAwareController {
     @Transactional(readOnly = true)
     public StudentProfile getMyStudentProfile() {
         return exerciseService.getStudentProfile(currentUser());
+    }
+
+    @GetMapping("/my/report1/{categoryId}")
+    @Transactional(readOnly = true)
+    public StudentReport1 getMyStudentReport1(@PathVariable Integer categoryId) {
+        return exerciseService.getMyStudentReport1(categoryId, currentUser());
+    }
+
+    @GetMapping("/my/report2/{categoryId}")
+    @Transactional(readOnly = true)
+    public StudentReport2 getMyStudentReport2(@PathVariable Integer categoryId) {
+        return exerciseService.getMyStudentReport2(categoryId, currentUser());
+    }
+
+    @GetMapping("/my/report3/{categoryId}")
+    @Transactional(readOnly = true)
+    public StudentReport3 getMyStudentReport3(@PathVariable Integer categoryId) {
+        return exerciseService.getMyStudentReport3(categoryId, currentUser());
     }
 }

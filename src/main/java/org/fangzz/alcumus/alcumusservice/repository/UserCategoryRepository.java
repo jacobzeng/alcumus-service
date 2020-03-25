@@ -5,8 +5,11 @@ import org.fangzz.alcumus.alcumusservice.model.User;
 import org.fangzz.alcumus.alcumusservice.model.UserCategory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+
+import java.util.List;
 
 public interface UserCategoryRepository extends AbstractRepository<UserCategory> {
     UserCategory findByUserAndCurrent(User student, boolean current);
@@ -49,4 +52,9 @@ public interface UserCategoryRepository extends AbstractRepository<UserCategory>
     int sumGiveup(@Param("user") User student, @Param("parent") ExerciseCategory parent);
 
     int countByUserAndCategoryLevelAndUserLevel(User student, int categoryLevel, int userLevel);
+
+    List<UserCategory> findByUserAndCategoryParent(User student, ExerciseCategory parent, Sort sort);
+
+    Integer countByUserAndCategoryCodeLikeAndCategoryLevelAndUserLevel(User student, String categoryCodeLike,
+                                                                       int categoryLevel, int userLevel);
 }

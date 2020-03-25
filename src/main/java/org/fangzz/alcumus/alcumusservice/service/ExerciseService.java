@@ -1,8 +1,6 @@
 package org.fangzz.alcumus.alcumusservice.service;
 
-import org.fangzz.alcumus.alcumusservice.dto.ExerciseAnswerResponse;
-import org.fangzz.alcumus.alcumusservice.dto.ExerciseGiveUpResponse;
-import org.fangzz.alcumus.alcumusservice.dto.StudentProfile;
+import org.fangzz.alcumus.alcumusservice.dto.*;
 import org.fangzz.alcumus.alcumusservice.dto.param.*;
 import org.fangzz.alcumus.alcumusservice.model.*;
 import org.springframework.data.domain.Page;
@@ -78,4 +76,10 @@ public interface ExerciseService {
     StudentProfile getStudentProfile(@NotNull User student);
 
     void calculateUserExerciseLogStats(@NotNull Integer id, @NotNull User requireUser);
+
+    StudentReport1 getMyStudentReport1(@NotNull Integer categoryId, @NotNull User student);
+
+    StudentReport2 getMyStudentReport2(@NotNull Integer categoryId, @NotNull User currentUser);
+
+    StudentReport3 getMyStudentReport3(@NotNull Integer categoryId, @NotNull User currentUser);
 }
