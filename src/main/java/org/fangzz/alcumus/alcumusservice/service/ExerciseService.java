@@ -77,9 +77,9 @@ public interface ExerciseService {
 
     void calculateUserExerciseLogStats(@NotNull Integer id, @NotNull User requireUser);
 
-    StudentReport1 getMyStudentReport1(@NotNull Integer categoryId, @NotNull User student);
+    StudentReport1 getStudentReport1(@NotNull Integer categoryId, @NotNull User student);
 
-    StudentReport2 getMyStudentReport2(@NotNull Integer categoryId, @NotNull User currentUser);
+    StudentReport2 getStudentReport2(@NotNull Integer categoryId, @NotNull User currentUser);
 
     StudentReport3 getMyStudentReport3(@NotNull Integer categoryId, @NotNull User currentUser);
 }

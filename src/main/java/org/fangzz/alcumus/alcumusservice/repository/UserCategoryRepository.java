@@ -25,7 +25,7 @@ public interface UserCategoryRepository extends AbstractRepository<UserCategory>
     @Query(value = "SELECT avg(a.score) FROM UserCategory a where a.category.level=1 and a.user=:user")
     Double avgRootScore(@Param("user") User user);
 
-    @Query(value = "SELECT avg(a.difficultyLevel) FROM UserCategory a where a.category.parent=:category and a.user=:user")
+    @Query(value = "SELECT avg(a.difficultyLevel) FROM UserCategory a where a.category.parent=:category and a.user=:user and (a.counterOfFirstRight <> 0 or a.counterOfWrong<>0 or a.counterOfSecondRight<>0 or a.counterOfGiveup<>0)")
     Double avgDifficultyLevel(@Param("category") ExerciseCategory category, @Param("user") User user);
 
     @Query(value = "SELECT avg(a.difficultyLevel) FROM UserCategory a where a.category.level=1 and a.user=:user")

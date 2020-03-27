@@ -70,13 +70,13 @@ public class MyRestController extends UserAwareController {
     @GetMapping("/my/report1/{categoryId}")
     @Transactional(readOnly = true)
     public StudentReport1 getMyStudentReport1(@PathVariable Integer categoryId) {
-        return exerciseService.getMyStudentReport1(categoryId, currentUser());
+        return exerciseService.getStudentReport1(categoryId, currentUser());
     }
 
     @GetMapping("/my/report2/{categoryId}")
     @Transactional(readOnly = true)
     public StudentReport2 getMyStudentReport2(@PathVariable Integer categoryId) {
-        return exerciseService.getMyStudentReport2(categoryId, currentUser());
+        return exerciseService.getStudentReport2(categoryId, currentUser());
     }
 
     @GetMapping("/my/report3/{categoryId}")

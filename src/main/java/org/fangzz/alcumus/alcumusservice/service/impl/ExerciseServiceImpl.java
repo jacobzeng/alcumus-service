@@ -905,7 +905,7 @@ public class ExerciseServiceImpl implements ExerciseService {
     }
 
     @Override
-    public StudentReport1 getMyStudentReport1(@NotNull Integer categoryId, @NotNull User student) {
+    public StudentReport1 getStudentReport1(@NotNull Integer categoryId, @NotNull User student) {
         ExerciseCategory category = findExerciseCategoryById(categoryId);
         if (category.getLevel() != 2) {
             throw new BizException("该专题不是3级专题");
@@ -953,7 +953,7 @@ public class ExerciseServiceImpl implements ExerciseService {
     }
 
     @Override
-    public StudentReport2 getMyStudentReport2(@NotNull Integer categoryId, @NotNull User student) {
+    public StudentReport2 getStudentReport2(@NotNull Integer categoryId, @NotNull User student) {
         ExerciseCategory category = findExerciseCategoryById(categoryId);
         if (category.getLevel() != 1) {
             throw new BizException("该专题不是2级专题");

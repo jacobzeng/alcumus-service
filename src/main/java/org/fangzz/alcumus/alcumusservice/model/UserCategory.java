@@ -21,7 +21,7 @@ public class UserCategory extends BaseEntity {
     private int counterOfSecondRight = 0;
     private int counterOfGiveup = 0;
     private int score = 0;
-    private int difficultyLevel = 1;
+    private int difficultyLevel = 1; //难度等级，1-15
     @Column(name = "user_category_level")
     private int userLevel = 0; //用户级别
 
