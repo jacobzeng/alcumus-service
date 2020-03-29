@@ -412,10 +412,21 @@ public class ExerciseServiceImpl implements ExerciseService {
                                                       @NotNull @Valid ExerciseAnswerParameter parameter) {
         Exercise exercise = findExerciseById(parameter.getExerciseId());
         UserExerciseLog log = userExerciseLogRepository.findByUserAndExercise(student, exercise);
+        String lastAnswer = null;
+        if (1 == parameter.getAnswers().length) {
+            //只回答了一次
+            lastAnswer = parameter.getAnswers()[0];
+            log.setAnswer(lastAnswer);
+        } else {
+            lastAnswer = parameter.getAnswers()[1];
+            log.setAnswer(parameter.getAnswers()[0]);
+            log.setAnswer2(parameter.getAnswers()[1]);
+        }
+
 
         ExerciseAnswerResponse result = new ExerciseAnswerResponse();
 
-        if (!exercise.getAnswer().equals(parameter.getAnswer())) {
+        if (!exercise.getAnswer().equals(lastAnswer)) {
             result.setRight(false);
 
             //2次都错了
@@ -691,6 +702,7 @@ public class ExerciseServiceImpl implements ExerciseService {
                                                  @NotNull @Valid ExerciseGiveUpParameter parameter) {
         Exercise exercise = findExerciseById(parameter.getExerciseId());
         UserExerciseLog log = userExerciseLogRepository.findByUserAndExercise(student, exercise);
+        log.setAnswer(parameter.getAnswer());
         log.setStatus(UserExerciseLog.STATUS_GIVE_UP);
         userExerciseLogRepository.save(log);
         increaseUserExerciseLogStat(log);
@@ -832,7 +844,7 @@ public class ExerciseServiceImpl implements ExerciseService {
 
         result.setRootUserCategory(UserCategorySummary.from(firstUserCategory));
 
-        Pageable queryUserCategory = PageRequest.of(0, 99, Sort.by(Sort.Direction.DESC, "score"));
+        Pageable queryUserCategory = PageRequest.of(0, 99, Sort.by(Sort.Direction.ASC, "category.createdAt"));
         Page<UserCategory> queryUserCategoryResult = userCategoryRepository
                 .findByUserAndCategoryLevel(student, 1, queryUserCategory);
 
@@ -925,7 +937,8 @@ public class ExerciseServiceImpl implements ExerciseService {
         result.setSecondUserCategory(UserCategorySummary.from(secondUserCategory));
 
         List<UserCategory> thirdUserCategories = userCategoryRepository
-                .findByUserAndCategoryParent(student, category.getParent(), Sort.by(Sort.Direction.DESC, "score"));
+                .findByUserAndCategoryParent(student, category.getParent(),
+                        Sort.by(Sort.Direction.ASC, "category.createdAt"));
         List<ExerciseCategory> thirdCategories = exerciseCategoryRepository.findByParent(category.getParent());
         Set<Integer> hasScoreCategories = Sets.newHashSet();
         List<UserCategorySummary> thirdCategorySummaries = Lists.newArrayList();
@@ -967,7 +980,7 @@ public class ExerciseServiceImpl implements ExerciseService {
         result.setSecondUserCategory(UserCategorySummary.from(userCategory));
 
         List<UserCategory> thirdUserCategories = userCategoryRepository
-                .findByUserAndCategoryParent(student, category, Sort.by(Sort.Direction.DESC, "score"));
+                .findByUserAndCategoryParent(student, category, Sort.by(Sort.Direction.ASC, "category.createdAt"));
         List<ExerciseCategory> thirdCategories = exerciseCategoryRepository.findByParent(category);
         Set<Integer> hasScoreCategories = Sets.newHashSet();
         List<UserCategorySummary> thirdCategorySummaries = Lists.newArrayList();
@@ -1006,7 +1019,7 @@ public class ExerciseServiceImpl implements ExerciseService {
         result.setFirstUserCategory(UserCategorySummary.from(userCategory));
 
         List<UserCategory> secondUserCategories = userCategoryRepository
-                .findByUserAndCategoryParent(student, category, Sort.by(Sort.Direction.DESC, "score"));
+                .findByUserAndCategoryParent(student, category, Sort.by(Sort.Direction.ASC, "category.createdAt"));
         List<ExerciseCategory> secondCategories = exerciseCategoryRepository.findByParent(category);
         Set<Integer> hasScoreCategories = Sets.newHashSet();
         List<UserCategorySummary> secondCategorySummaries = Lists.newArrayList();
@@ -1055,6 +1068,11 @@ public class ExerciseServiceImpl implements ExerciseService {
                         UserExerciseLog.STATUS_GIVE_UP));
 
         return result;
+    }
+
+    @Override
+    public UserExerciseLog getUserExerciseLogById(@NotNull Integer id, @NotNull User currentUser) {
+        return userExerciseLogRepository.findById(id).orElse(null);
     }
 
     private UserCategory initUserCategory(User student, ExerciseCategory category) {

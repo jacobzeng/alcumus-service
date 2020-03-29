@@ -82,4 +82,6 @@ public interface ExerciseService {
     StudentReport2 getStudentReport2(@NotNull Integer categoryId, @NotNull User currentUser);
 
     StudentReport3 getMyStudentReport3(@NotNull Integer categoryId, @NotNull User currentUser);
+
+    UserExerciseLog getUserExerciseLogById(@NotNull Integer id, @NotNull User currentUser);
 }

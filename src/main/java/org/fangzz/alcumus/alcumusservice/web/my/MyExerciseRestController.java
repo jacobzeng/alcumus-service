@@ -25,12 +25,12 @@ public class MyExerciseRestController extends UserAwareController {
 
     @GetMapping("/my/exercise-categories/focus")
     @Transactional(readOnly = true)
-    public ExerciseCategorySummary currentFocus() {
+    public ExerciseCategorySummary2 currentFocus() {
         UserCategory userCategory = exerciseService.getStudentCurrentCategory(currentUser());
         if (null == userCategory) {
             return null;
         }
-        return ExerciseCategorySummary.from(userCategory.getCategory());
+        return ExerciseCategorySummary2.from(userCategory.getCategory());
     }
 
     @PostMapping("/my/exercise-categories/focus")
@@ -49,7 +49,6 @@ public class MyExerciseRestController extends UserAwareController {
 
     @PostMapping("/my/exercises/answer")
     public ExerciseAnswerResponse submitAnswer(@RequestBody ExerciseAnswerParameter parameter) {
-        parameter.setAnswer(parameter.getAnswer().trim());
         return exerciseService.submitStudentAnswer(currentUser(), parameter);
     }
 
@@ -65,5 +64,11 @@ public class MyExerciseRestController extends UserAwareController {
         parameter.setUserId(currentUser().getId());
         List<UserCategory> userCategories = exerciseService.listUserCategories(parameter);
         return userCategories.stream().map(UserCategorySummary::from).collect(Collectors.toList());
+    }
+
+    @GetMapping("/my/exercise-logs/{id}")
+    @Transactional(readOnly = true)
+    public UserExerciseLogSummary getUserExerciseLog(@PathVariable Integer id) {
+        return UserExerciseLogSummary.from(exerciseService.getUserExerciseLogById(id, currentUser()));
     }
 }
