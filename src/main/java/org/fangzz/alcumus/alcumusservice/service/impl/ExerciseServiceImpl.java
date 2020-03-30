@@ -280,6 +280,14 @@ public class ExerciseServiceImpl implements ExerciseService {
         }, Sort.by(Sort.Direction.ASC, "createdAt"));
     }
 
+    public void cleanStudentCurrentCategory(@NotNull User student) {
+        UserCategory current = userCategoryRepository.findByUserAndCurrent(student, true);
+        if (null != current) {
+            current.setCurrent(false);
+            userCategoryRepository.save(current);
+        }
+    }
+
     @Override
     public UserCategory setStudentCurrentCategory(@NotNull @Valid StudentSetCurrentCategoryParameter parameter,
                                                   @NotNull User currentUser) {
@@ -689,12 +697,42 @@ public class ExerciseServiceImpl implements ExerciseService {
         }
 
         if (null == newThirdCategory) {
-            throw new BizException("该二级专题下已经没有更多三级专题了，请您另外选择");
+            //找其他二级专题
+            ExerciseCategory firstCategory = secondCategory.getParent();
+
+            //先找相同一级专题下其他未通过的二级专题
+            UserCategory newSecondUserCategory = userCategoryRepository
+                    .findTop1ByUserAndCategoryParentAndScoreLessThan(student, firstCategory, 60);
+
+            secondCategory = newSecondUserCategory.getCategory();
+            newThirdUserCategory = userCategoryRepository
+                    .findTop1ByUserAndCategoryParentAndScoreLessThanAndIdNot(student, secondCategory, 60,
+                            currentUserCategory.getId());
+
+            if (null != newThirdUserCategory && !currentUserCategory.getId().equals(newThirdUserCategory.getId())) {
+                newThirdCategory = newThirdUserCategory.getCategory();
+            }
+
+            if (newThirdCategory == null) {
+                //找相同二级专题下其他初始化的的三级专题
+                Pageable pageable = PageRequest.of(0, 1);
+                List<ExerciseCategory> queryResult = exerciseCategoryRepository
+                        .findOtherThirdCategory(secondCategory, student, pageable);
+                if (!queryResult.isEmpty()) {
+                    newThirdCategory = queryResult.get(0);
+                }
+            }
+
+//            throw new BizException("该二级专题下已经没有更多三级专题了，请您另外选择");
         }
 
-        StudentSetCurrentCategoryParameter studentSetCurrentCategoryParameter = new StudentSetCurrentCategoryParameter();
-        studentSetCurrentCategoryParameter.setCategoryId(newThirdCategory.getId());
-        setStudentCurrentCategory(studentSetCurrentCategoryParameter, student);
+        if (null == newThirdCategory) {
+            cleanStudentCurrentCategory(student);
+        } else {
+            StudentSetCurrentCategoryParameter studentSetCurrentCategoryParameter = new StudentSetCurrentCategoryParameter();
+            studentSetCurrentCategoryParameter.setCategoryId(newThirdCategory.getId());
+            setStudentCurrentCategory(studentSetCurrentCategoryParameter, student);
+        }
     }
 
     @Override

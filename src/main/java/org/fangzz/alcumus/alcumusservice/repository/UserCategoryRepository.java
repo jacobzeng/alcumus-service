@@ -19,6 +19,9 @@ public interface UserCategoryRepository extends AbstractRepository<UserCategory>
     UserCategory findTop1ByUserAndCategoryParentAndScoreLessThanAndIdNot(User student, ExerciseCategory secondCategory,
                                                                          int score, Integer id);
 
+    UserCategory findTop1ByUserAndCategoryParentAndScoreLessThan(User student, ExerciseCategory secondCategory,
+                                                                 int score);
+
     @Query(value = "SELECT avg(a.score) FROM UserCategory a where a.category.parent=:category and a.user=:user")
     Double avgScore(@Param("category") ExerciseCategory category, @Param("user") User user);
 
