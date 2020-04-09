@@ -14,11 +14,11 @@ public class Exercise extends DeletedAbleEntity {
     @ManyToOne
     private ExerciseCategory secondCategory; //第2专题,可以为空
     private String name;
-    @Column(name = "exercise_desc", length = 4096)
+    @Column(name = "exercise_desc", columnDefinition = "TEXT")
     private String desc;
     private BigDecimal difficulty = new BigDecimal(0); //0到1之间
     private String answer; //答案
-    @Column(length = 4096)
+    @Column(columnDefinition = "TEXT")
     private String answerDesc; //答案解析
     @Column(name = "exercise_from")
     private String from; //练习题摘录自哪里
