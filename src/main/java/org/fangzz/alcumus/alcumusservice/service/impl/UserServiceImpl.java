@@ -7,6 +7,7 @@ import org.apache.commons.logging.LogFactory;
 import org.fangzz.alcumus.alcumusservice.dto.param.StudentRegisterParameter;
 import org.fangzz.alcumus.alcumusservice.dto.param.UserCreateParameter;
 import org.fangzz.alcumus.alcumusservice.dto.param.UserQueryParameter;
+import org.fangzz.alcumus.alcumusservice.dto.param.UserUpdateParameter;
 import org.fangzz.alcumus.alcumusservice.exception.BizException;
 import org.fangzz.alcumus.alcumusservice.model.User;
 import org.fangzz.alcumus.alcumusservice.model.UserRole;
@@ -29,6 +30,7 @@ import javax.validation.Valid;
 import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 
 @Validated
@@ -53,7 +55,7 @@ public class UserServiceImpl implements UserService {
         user.setUsername(parameter.getUsername());
         user.setNickname(parameter.getNickname());
         user.setPassword(bCryptPasswordEncoder.encode(parameter.getPassword()));
-        if (parameter.getRoles().length == 0) {
+        if (parameter.getRoles() == null || parameter.getRoles().length == 0) {
             user.setRoles(Arrays.asList(UserRole.ROLE_USER));
         } else {
             user.setRoles(Arrays.asList(parameter.getRoles()));
@@ -76,7 +78,14 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public User findById(@NotNull Integer id) {
-        return userRepository.findById(id).orElse(null);
+        User result = userRepository.findById(id).orElse(null);
+        if (null == result) {
+            throw new BizException("用户不存在");
+        }
+        if (result.isDeleted()) {
+            throw new BizException("用户已被删除");
+        }
+        return result;
     }
 
     @Override
@@ -86,6 +95,7 @@ public class UserServiceImpl implements UserService {
             @Override
             public Predicate toPredicate(Root root, CriteriaQuery criteriaQuery, CriteriaBuilder criteriaBuilder) {
                 List<Predicate> predicateList = Lists.newArrayList();
+                predicateList.add(criteriaBuilder.isFalse(root.get("deleted")));
                 if (!Strings.isNullOrEmpty(parameter.getUsernameLike())) {
                     predicateList
                             .add(criteriaBuilder.like(root.get("username"), "%" + parameter.getUsernameLike() + "%"));
@@ -93,5 +103,29 @@ public class UserServiceImpl implements UserService {
                 return criteriaBuilder.and(predicateList.toArray(new Predicate[]{}));
             }
         }, pageable);
+    }
+
+    @Override
+    public User updateUser(@NotNull Integer id, @NotNull @Valid UserUpdateParameter parameter,
+                           @NotNull User requireUser) {
+        User user = findById(id);
+        user.setNickname(parameter.getNickname());
+        if (!Strings.isNullOrEmpty(parameter.getPassword())) {
+            user.setPassword(bCryptPasswordEncoder.encode(parameter.getPassword()));
+        }
+        return userRepository.save(user);
+    }
+
+    @Override
+    public User createUser(@NotNull @Valid UserCreateParameter parameter, @NotNull User requireUser) {
+        return createUser(parameter);
+    }
+
+    @Override
+    public void deleteUser(@NotNull Integer id, @NotNull User requireUser) {
+        User user = findById(id);
+        user.setDeleted(true);
+        user.setUsername(user.getUsername() + new Date().getTime());
+        userRepository.save(user);
     }
 }
