@@ -4,6 +4,9 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Strings;
 import com.google.common.collect.Maps;
 import com.google.common.io.ByteSource;
+import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.fangzz.alcumus.alcumusservice.dto.ExerciseCategoryScoreDefinitionSummary;
 import org.fangzz.alcumus.alcumusservice.dto.ExerciseCategorySummary;
 import org.fangzz.alcumus.alcumusservice.dto.ExerciseSummary;
@@ -18,13 +21,16 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -35,6 +41,9 @@ import java.util.stream.Collectors;
 @RequestMapping("/api")
 @Transactional
 public class ExerciseMgrRestController extends UserAwareController {
+
+    private final static Log log = LogFactory.getLog(ExerciseMgrRestController.class);
+
     @Autowired
     private ExerciseService exerciseService;
 
@@ -123,17 +132,28 @@ public class ExerciseMgrRestController extends UserAwareController {
         return definitions.stream().map(ExerciseCategoryScoreDefinitionSummary::from).collect(Collectors.toList());
     }
 
+
+    private String dataFolder = "data";
+
+    /**
+     * 从本地目录data中导入数据
+     *
+     * @return
+     * @throws IOException
+     */
     @PostMapping("/mgr/import/exercises")
-    public Map importExercises(@RequestParam("file") MultipartFile file) throws IOException {
+    public Map importExercises() throws IOException {
         Map result = Maps.newHashMap();
-        if (file.isEmpty()) {
+        File file = new File(dataFolder, "data.txt");
+        if (!file.exists()) {
+            result.put("message", "data.txt不存在");
             return result;
         }
 
         ByteSource byteSource = new ByteSource() {
             @Override
             public InputStream openStream() throws IOException {
-                return file.getInputStream();
+                return new FileInputStream(file);
             }
         };
 
@@ -167,10 +187,12 @@ public class ExerciseMgrRestController extends UserAwareController {
                     exerciseName = line.split("标题：")[1];
                 } else if (line.startsWith("题目：")) {
                     exerciseDesc = line.split("题目：")[1];
+                    exerciseDesc = resolveHtmlContent(exerciseDesc);
                 } else if (line.startsWith("答案：")) {
                     exerciseAnswer = line.split("答案：")[1];
                 } else if (line.startsWith("解析：")) {
                     exerciseAnswerDesc = line.split("解析：")[1];
+                    exerciseAnswerDesc = resolveHtmlContent(exerciseAnswerDesc);
                 } else if (line.startsWith("难度：")) {
                     exerciseDifficulty = new BigDecimal(line.split("难度：")[1]);
                 } else if (line.startsWith("第二专题：")) {
@@ -207,9 +229,12 @@ public class ExerciseMgrRestController extends UserAwareController {
 
             } else if (!exerciseEnd) {
                 //一道题还未结束，那就是有内容换行了
-                if (exerciseDifficulty == null) {
+                if (exerciseAnswer == null) {
+                    //还未设置答案，上一行是题目描述
+                    exerciseDesc += "<br/>" + resolveHtmlContent(line);
+                } else if (exerciseDifficulty == null) {
                     //还未设置难度,上一行是问题答案解析
-                    exerciseAnswerDesc += "\\r\\n" + line;
+                    exerciseAnswerDesc += "<br/>" + resolveHtmlContent(line);
                 }
 
             } else {
@@ -237,5 +262,40 @@ public class ExerciseMgrRestController extends UserAwareController {
     @PostMapping("/mgr/users/{id}/calculate-user-exercise-log-stats")
     public void calculateUserExerciseLogStats(@PathVariable Integer id) {
         exerciseService.calculateUserExerciseLogStats(id, requireUser());
+    }
+
+    private Pattern imagePattern = Pattern.compile("<img (.*?)>");
+
+    private String resolveHtmlContent(String str) {
+        if (str.startsWith("<img")) {
+            Matcher matcher = imagePattern.matcher(str);
+            if (matcher.find()) {
+                String imageFilename = matcher.group(1);
+                File imageFile = new File(dataFolder, imageFilename);
+                if (imageFile.exists()) {
+                    FileInputStream fis = null;
+                    try {
+                        fis = new FileInputStream(imageFile);
+                        byte byteArray[] = new byte[(int) imageFile.length()];
+                        fis.read(byteArray);
+                        String imageString = Base64.encodeBase64String(byteArray);
+                        if (imageFilename.endsWith("\\.png")) {
+                            return "<p><img src=\"data:image/png;base64," + imageString + "\">";
+                        } else {
+                            return "<p><img src=\"data:image/jpeg;base64," + imageString + "\">";
+                        }
+                    } catch (Exception e) {
+                        log.error("convert image file to base64 string failed", e);
+                        return "<p>图片转换出错</p>";
+                    }
+                } else {
+                    return "<p>图片不存在</p>";
+                }
+            } else {
+                return str;
+            }
+        } else {
+            return str;
+        }
     }
 }
